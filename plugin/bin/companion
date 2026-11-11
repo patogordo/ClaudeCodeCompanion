@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["bleak>=0.22"]
+# ///
+"""Ponte entre o Claude Code e o Companion, por Bluetooth (BLE).
+
+    companion send <comando>   manda um comando (os hooks usam este); nunca espera nem falha
+    companion status           pergunta o status ao Companion (JSON)
+    companion start            sobe a ponte em segundo plano, se ainda não estiver rodando
+    companion bridge           a ponte em si: mantém a conexão BLE e repassa o que chega por UDP
+
+Os hooks rodam a cada passo do Claude, então o `send` só manda um datagrama UDP para a ponte local, que segura uma
+conexão BLE só (conectar a cada evento levaria segundos). Com COMPANION_SIM=localhost:4000, a ponte fala com o
+firmware rodando no Wokwi em vez do Bluetooth. Comandos em docs/protocolo.md.
+"""
+
+import asyncio
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("COMPANION_PORT", "47321"))
+SERVICE_UUID = "5d1e0000-23fd-4dbe-89ca-ba268b36c947"
+COMMAND_UUID = "5d1e0001-23fd-4dbe-89ca-ba268b36c947"
+STATUS_UUID = "5d1e0002-23fd-4dbe-89ca-ba268b36c947"
+STATES = ("idle", "thinking", "done", "question", "error")
+SIM = os.environ.get("COMPANION_SIM")  # host:porta da serial do Wokwi; sem isso, a ponte usa o Bluetooth
+LOG = Path(os.environ.get("COMPANION_LOG", Path.home() / ".cache" / "claude-companion" / "bridge.log"))
+
+
+def send(command: str) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.sendto(command.encode(), (HOST, PORT))
+
+
+def status() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(3)
+        s.sendto(b"status", (HOST, PORT))
+        try:
+            print(s.recv(512).decode())
+            return 0
+        except (TimeoutError, ConnectionResetError):
+            print(json.dumps({"connected": False, "error": "a ponte não está rodando: companion start"}, ensure_ascii=False))
+            return 1
+
+
+def bridge_running() -> bool:
+    # a ponte segura a porta UDP; se der para ocupá-la, não há ponte
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.bind((HOST, PORT))
+            return False
+        except OSError:
+            return True
+
+
+def start() -> int:
+    if bridge_running():
+        return 0
+    if SIM:  # o simulador não precisa do bleak
+        cmd = [sys.executable, __file__, "bridge"]
+    else:
+        cmd = ble_bridge_command()
+        if not cmd:
+            return 1
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as log:
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+    return 0
+
+
+def ble_bridge_command() -> list[str] | None:
+    try:
+        import bleak  # noqa: F401
+
+        return [sys.executable, __file__, "bridge"]
+    except ImportError:
+        if shutil.which("uv"):
+            return ["uv", "run", "--quiet", "--script", __file__, "bridge"]
+        print("companion: instale o uv (https://docs.astral.sh/uv/) ou o bleak (pip install bleak)", file=sys.stderr)
+        return None
+
+
+async def bridge() -> None:
+    def log(*args) -> None:
+        print(*args, flush=True)
+
+    loop = asyncio.get_running_loop()
+    inbox: asyncio.Queue = asyncio.Queue()
+
+    class Inbox(asyncio.DatagramProtocol):
+        def datagram_received(self, data, addr):
+            inbox.put_nowait((data.decode(errors="ignore").strip()[:31], addr))
+
+    # falha se outra ponte já estiver na porta: só uma por máquina, para todas as sessões do Claude
+    transport, _ = await loop.create_datagram_endpoint(Inbox, local_addr=(HOST, PORT))
+    # write(comando) e read_status() da conexão atual (BLE ou simulador); None quando desconectado
+    link = {"write": None, "read_status": None, "state": None}
+
+    async def forward() -> None:
+        while True:
+            command, addr = await inbox.get()
+            try:
+                if command == "status":
+                    reply = await link["read_status"]() if link["read_status"] else b'{"connected":false}'
+                    transport.sendto(reply, addr)
+                    continue
+                if command in STATES:
+                    link["state"] = command  # reenviado quando reconectar
+                if link["write"]:
+                    await link["write"](command)
+            except Exception as e:  # o Companion desligou no meio: a conexão volta sozinha
+                log("erro ao enviar", command, repr(e))
+                if command == "status":
+                    transport.sendto(b'{"connected":false}', addr)
+
+    async def connect_ble() -> None:
+        from bleak import BleakClient, BleakScanner
+
+        while True:
+            try:
+                device = await BleakScanner.find_device_by_filter(
+                    lambda d, ad: SERVICE_UUID in [u.lower() for u in ad.service_uuids], timeout=10
+                )
+                if device:
+                    gone = asyncio.Event()
+                    async with BleakClient(device, disconnected_callback=lambda _: gone.set()) as client:
+
+                        async def write(command: str) -> None:
+                            await client.write_gatt_char(COMMAND_UUID, command.encode(), response=True)
+
+                        async def read_status() -> bytes:
+                            return bytes(await client.read_gatt_char(STATUS_UUID))
+
+                        log("conectado a", device.name or device.address)
+                        link.update(write=write, read_status=read_status)
+                        if link["state"]:
+                            await write(link["state"])
+                        await gone.wait()
+                    log("desconectado")
+            except Exception as e:  # Bluetooth desligado, sem permissão, ou o Companion sumiu no meio
+                log("bluetooth:", repr(e))
+                await asyncio.sleep(5)
+            finally:
+                link.update(write=None, read_status=None)
+
+    # O firmware rodando no Wokwi: a serial simulada vira uma porta TCP (rfc2217ServerPort no wokwi.toml)
+    async def connect_sim(target: str) -> None:
+        host, _, port = target.rpartition(":")
+        while True:
+            try:
+                reader, writer = await asyncio.open_connection(host or "localhost", int(port))
+                latest: asyncio.Queue = asyncio.Queue(maxsize=1)
+
+                async def write(command: str) -> None:
+                    writer.write(command.encode() + b"\n")
+                    await writer.drain()
+
+                async def read_status() -> bytes:
+                    while not latest.empty():  # descarta status velho (o do boot, por exemplo)
+                        latest.get_nowait()
+                    await write("status")
+                    return await asyncio.wait_for(latest.get(), 3)
+
+                log("conectado ao simulador em", target)
+                link.update(write=write, read_status=read_status)
+                if link["state"]:
+                    await write(link["state"])
+                async for raw in reader:  # a serial é texto; o que não é status (log, boot) é descartado
+                    line = raw.decode(errors="ignore")
+                    if '{"fw"' in line:
+                        if latest.full():
+                            latest.get_nowait()
+                        latest.put_nowait(line[line.index('{"fw"') :].strip().encode())
+                log("simulador desconectado")
+            except Exception as e:  # simulador parado ou reiniciando
+                log("simulador:", repr(e))
+            finally:
+                link.update(write=None, read_status=None)
+            await asyncio.sleep(2)
+
+    log(f"ponte ouvindo em {HOST}:{PORT}" + (f", simulador em {SIM}" if SIM else ""))
+    await asyncio.gather(forward(), connect_sim(SIM) if SIM else connect_ble())
+
+
+def main(argv: list[str]) -> int:
+    match argv:
+        case ["send", *words] if words:
+            send(" ".join(words))
+            return 0
+        case ["status"]:
+            return status()
+        case ["start"]:
+            return start()
+        case ["bridge"]:
+            try:
+                asyncio.run(bridge())
+            except OSError as e:  # porta ocupada: já existe uma ponte
+                print("companion:", e, file=sys.stderr)
+                return 1
+            return 0
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

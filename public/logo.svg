@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Claude Code Companion">
+  <rect width="64" height="64" rx="14" fill="#0b0b0d"/>
+  <!-- o mascote em pixel art (16×10), olhos brancos: os LEDs apagados atrás do difusor -->
+  <g transform="translate(8 17) scale(3)" shape-rendering="crispEdges">
+    <path d="M2 0h12v4h2v2h-2v2h-1v2h-1v-2h-1v2h-1v-2H6v2H5v-2H4v2H3v-2H2V6H0V4h2z" fill="#d97757"/>
+    <rect x="4" y="2" width="1" height="2" fill="#f4f1ea"/>
+    <rect x="11" y="2" width="1" height="2" fill="#f4f1ea"/>
+  </g>
+</svg>

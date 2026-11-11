@@ -1,0 +1,42 @@
+# Teste no Wokwi (pnpm sim:test): liga, recebe comandos pela serial, desliga segurando o botão e liga de novo.
+name: Companion liga, obedece, desliga e liga
+version: 1
+author: Claude Code Companion
+
+steps:
+  - wait-serial: '"state":"idle"'
+  - write-serial: "thinking\n"
+  - delay: 300ms
+  - write-serial: "status\n"
+  - wait-serial: '"state":"thinking"'
+  - write-serial: "done\n"
+  - write-serial: "vol 30\n"
+  - delay: 300ms
+  - write-serial: "status\n"
+  - wait-serial: '"state":"done","vol":30'
+  - write-serial: "dancing\n"
+  - wait-serial: "comando desconhecido: dancing"
+
+  # segurar 1 s desliga
+  - set-control:
+      part-id: power
+      control: pressed
+      value: 1
+  - wait-serial: "desligando"
+  - set-control:
+      part-id: power
+      control: pressed
+      value: 0
+  - delay: 1500ms
+
+  # segurar 1 s liga de novo, com o volume guardado na flash
+  - set-control:
+      part-id: power
+      control: pressed
+      value: 1
+  - delay: 1500ms
+  - set-control:
+      part-id: power
+      control: pressed
+      value: 0
+  - wait-serial: '"state":"idle","vol":30'

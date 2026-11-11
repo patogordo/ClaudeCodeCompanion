@@ -1,0 +1,12 @@
+{
+  "name": "companion",
+  "description": "Plugin do Claude Code Companion, o robozinho de mesa com olhos de LED",
+  "owner": { "name": "patogordo" },
+  "plugins": [
+    {
+      "name": "companion",
+      "source": "./plugin",
+      "description": "Os olhos de LED do Companion mostram, por Bluetooth, o que o Claude está fazendo"
+    }
+  ]
+}

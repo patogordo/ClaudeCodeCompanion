@@ -1,0 +1,2 @@
+# Lista de bibliotecas do Wokwi (wokwi.com); no arduino-cli: arduino-cli lib install "Adafruit NeoPixel"
+Adafruit NeoPixel

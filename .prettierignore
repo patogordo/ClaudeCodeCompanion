@@ -1,0 +1,7 @@
+# Markdown fica como está: as tabelas são quebradas à mão
+*.md
+pnpm-lock.yaml
+.nuxt
+.output
+firmware
+plugin/bin
