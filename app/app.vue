@@ -277,7 +277,9 @@ claude plugin install companion@companion</code></pre>
     </section>
 
     <footer class="muted">
-      Projeto independente, sem relação com a Anthropic. Claude é marca da Anthropic.
+      Projeto pessoal, sem fins comerciais e sem relação com a Anthropic. O mascote, Claude e Claude Code são da
+      Anthropic; se quiserem a remoção, é só
+      <a href="https://github.com/patogordo/ClaudeCodeCompanion/issues">entrar em contato</a>.
       <template v-if="status"> Firmware {{ status.fw }}.</template>
     </footer>
   </main>
@@ -552,5 +554,8 @@ td:first-child {
 footer {
   margin-top: 24px;
   text-align: center;
+}
+footer a {
+  color: inherit;
 }
 </style>

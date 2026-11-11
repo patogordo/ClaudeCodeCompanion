@@ -13,7 +13,11 @@ branco: em repouso ficam brancos. Enquanto o Claude pensa, alternam entre amarel
 verdes e tocam um som. Se ele tiver uma dúvida, ficam azuis. Se algo der errado, ficam vermelhos e tocam outro som. Dá
 para tirar os olhos da tela e ainda saber a hora de voltar.
 
-> Projeto independente, sem relação com a Anthropic. Claude, Claude Code e o mascote são da Anthropic.
+> **Projeto pessoal, sem fins comerciais.** É um hobby, feito para uso próprio e sem intenção de venda. O mascote do
+> Claude Code e os nomes Claude e Claude Code pertencem à Anthropic, e reconheço isso: este projeto não tem nenhuma
+> relação com a Anthropic, nem é apoiado ou endossado por ela. Se a Anthropic quiser a remoção de qualquer parte, basta
+> entrar em contato pelo [GitHub](https://github.com/patogordo) ou abrir uma
+> [issue](https://github.com/patogordo/ClaudeCodeCompanion/issues), e eu removo.
 
 <p align="center">
   <img src="docs/screenshots/portal.png" alt="Portal do Companion, com os olhos no estado Pensando e os controles de volume e brilho" width="560">
@@ -143,4 +147,5 @@ publicado em [patogordo.github.io/ClaudeCodeCompanion](https://patogordo.github.
 
 ## Licença
 
-MIT.
+O código é MIT. O mascote e as marcas Claude e Claude Code são da Anthropic e não fazem parte da licença (veja o aviso
+no começo desta página).
