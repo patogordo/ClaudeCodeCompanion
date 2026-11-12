@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 730" role="img" aria-label="Ligações de energia do Companion: bateria, carga pelo USB-C, medição da bateria, botão e o corte dos LEDs">
+  <style>
+    text { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; fill: #1f2328 }
+    .t { font-size: 15px; font-weight: 600 }
+    .h { font-size: 19px; font-weight: 700 }
+    .s { font-size: 12px; fill: #57606a }
+    .pin { font-weight: 600 }
+    .box { fill: #f6f8fa; stroke: #1f2328; stroke-width: 1.5 }
+    .res { fill: #fff; stroke: #1f2328; stroke-width: 1.5 }
+    .bat { stroke: #cf222e; stroke-width: 2.5; fill: none }
+    .gnd { stroke: #57606a; stroke-width: 2.5; fill: none }
+    .led { stroke: #d97757; stroke-width: 3; fill: none }
+    .sig { stroke: #0969da; stroke-width: 2; fill: none }
+    .dat { stroke: #9a6700; stroke-width: 2; fill: none }
+    .v33 { stroke: #8250df; stroke-width: 2; fill: none }
+  </style>
+  <defs>
+    <g id="gnd" class="gnd">
+      <path d="M-11 0h22M-7 5h14M-3 10h6"/>
+    </g>
+  </defs>
+  <rect width="1000" height="730" rx="16" fill="#fff"/>
+
+  <text x="30" y="34" class="h">Energia do Companion</text>
+  <text x="30" y="56" class="s">Os outros pinos estão na tabela de pinagem (docs/hardware.md).</text>
+
+  <!-- legenda -->
+  <g transform="translate(640 22)">
+    <path class="bat" d="M0 6h22"/><text x="28" y="10" class="s">bateria (BAT+)</text>
+    <path class="led" d="M120 6h22"/><text x="148" y="10" class="s">LEDs, chaveado</text>
+    <path class="gnd" d="M250 6h22"/><text x="278" y="10" class="s">GND</text>
+    <path class="sig" d="M0 26h22"/><text x="28" y="30" class="s">sinal</text>
+    <path class="dat" d="M120 26h22"/><text x="148" y="30" class="s">dados dos LEDs</text>
+    <path class="v33" d="M250 26h22"/><text x="278" y="30" class="s">3V3</text>
+  </g>
+
+  <!-- bateria -->
+  <rect x="30" y="140" width="150" height="110" rx="10" class="box"/>
+  <text x="105" y="172" text-anchor="middle" class="t">Bateria LiPo 1S</text>
+  <text x="105" y="194" text-anchor="middle">3,7 V · 500 a 1000 mAh</text>
+  <text x="105" y="214" text-anchor="middle">com proteção (PCM)</text>
+  <text x="186" y="163" class="pin">+</text>
+  <text x="186" y="224" class="pin">−</text>
+  <text x="105" y="276" text-anchor="middle" class="s">solde nos pads BAT+ e BAT−</text>
+  <text x="105" y="292" text-anchor="middle" class="s">confira a polaridade antes</text>
+
+  <!-- chave opcional -->
+  <path class="bat" d="M180 170h30M260 170h40"/>
+  <rect x="200" y="140" width="70" height="46" rx="6" fill="none" stroke="#57606a" stroke-dasharray="4 3"/>
+  <circle cx="215" cy="170" r="3.5" fill="#cf222e"/>
+  <circle cx="255" cy="170" r="3.5" fill="#cf222e"/>
+  <path d="M215 170l36-14" stroke="#cf222e" stroke-width="2.5"/>
+  <text x="235" y="204" text-anchor="middle" class="s">chave opcional</text>
+
+  <!-- BAT+ até o XIAO, o divisor e o barramento dos LEDs -->
+  <path class="bat" d="M300 170h80M300 170V72h490v28M300 170v80"/>
+  <circle cx="300" cy="170" r="4.5" fill="#cf222e"/>
+  <path class="gnd" d="M180 230h112a8 8 0 0 1 16 0h72"/>
+
+  <!-- divisor da bateria -->
+  <rect x="292" y="250" width="16" height="44" class="res"/>
+  <text x="282" y="277" text-anchor="end">220 kΩ</text>
+  <path class="sig" d="M300 294v36h80M300 330v20"/>
+  <circle cx="300" cy="330" r="4" fill="#0969da"/>
+  <rect x="292" y="350" width="16" height="44" class="res"/>
+  <text x="282" y="377" text-anchor="end">220 kΩ</text>
+  <path class="gnd" d="M300 394v14"/>
+  <use href="#gnd" x="300" y="408"/>
+  <text x="250" y="318" text-anchor="end" class="s">mede a bateria</text>
+
+  <!-- botão com pull-up -->
+  <path class="v33" d="M380 410h-40v8"/>
+  <rect x="332" y="418" width="16" height="44" class="res"/>
+  <text x="324" y="445" text-anchor="end">10 kΩ</text>
+  <path class="sig" d="M340 462v8h40M340 470v20"/>
+  <circle cx="340" cy="470" r="4" fill="#0969da"/>
+  <rect x="322" y="490" width="36" height="36" rx="6" class="box"/>
+  <circle cx="340" cy="508" r="9" fill="#cf222e"/>
+  <path class="gnd" d="M340 526v14"/>
+  <use href="#gnd" x="340" y="540"/>
+  <text x="312" y="505" text-anchor="end">botão liga/desliga</text>
+  <text x="312" y="521" text-anchor="end" class="s">segure 1 s</text>
+
+  <!-- XIAO -->
+  <rect x="445" y="98" width="50" height="14" rx="4" fill="#1f2328"/>
+  <rect x="380" y="110" width="180" height="430" rx="12" class="box"/>
+  <text x="470" y="132" text-anchor="middle" class="s">USB-C: carrega a bateria</text>
+  <text x="470" y="296" text-anchor="middle" class="t">XIAO ESP32-C3</text>
+  <text x="390" y="174" class="pin">BAT+</text>
+  <text x="390" y="190" class="s">pad embaixo</text>
+  <text x="390" y="234" class="pin">BAT−</text>
+  <text x="390" y="250" class="s">pad embaixo</text>
+  <text x="390" y="334" class="pin">A0 (D0)</text>
+  <text x="390" y="414" class="pin">3V3</text>
+  <text x="390" y="474" class="pin">D1</text>
+  <text x="390" y="490" class="s">GPIO3: acorda</text>
+  <text x="550" y="269" text-anchor="end" class="pin">D10</text>
+  <text x="550" y="444" text-anchor="end" class="pin">D3</text>
+
+  <!-- D10 → 2N7002 -->
+  <path class="sig" d="M560 265h80M600 265v35"/>
+  <circle cx="600" cy="265" r="4" fill="#0969da"/>
+  <rect x="592" y="300" width="16" height="40" class="res"/>
+  <text x="614" y="325">100 kΩ</text>
+  <path class="gnd" d="M600 340v14"/>
+  <use href="#gnd" x="600" y="354"/>
+  <rect x="640" y="225" width="100" height="75" rx="8" class="box"/>
+  <text x="690" y="260" text-anchor="middle" class="t">2N7002</text>
+  <text x="690" y="278" text-anchor="middle" class="s">MOSFET N</text>
+  <text x="698" y="240" class="s">D</text>
+  <text x="646" y="269" class="s">G</text>
+  <text x="698" y="295" class="s">S</text>
+  <path class="gnd" d="M690 300v14"/>
+  <use href="#gnd" x="690" y="314"/>
+
+  <!-- gate do AO3401: pull-up para BAT+ e puxado pelo 2N7002 -->
+  <path class="bat" d="M690 72v16"/>
+  <rect x="682" y="88" width="16" height="36" class="res"/>
+  <text x="676" y="111" text-anchor="end">100 kΩ</text>
+  <path class="sig" d="M690 124v101M690 135h50"/>
+  <circle cx="690" cy="135" r="4" fill="#0969da"/>
+  <rect x="740" y="100" width="100" height="70" rx="8" class="box"/>
+  <text x="790" y="132" text-anchor="middle" class="t">AO3401</text>
+  <text x="790" y="150" text-anchor="middle" class="s">MOSFET P</text>
+  <text x="798" y="114" class="s">S</text>
+  <text x="746" y="139" class="s">G</text>
+  <text x="798" y="166" class="s">D</text>
+
+  <!-- VLED: olhos, chapéu e capacitor -->
+  <path class="led" d="M790 170v60h70"/>
+  <circle cx="820" cy="230" r="4.5" fill="#d97757"/>
+  <path class="led" d="M820 230v25"/>
+  <path d="M806 255h28M806 265h28" stroke="#1f2328" stroke-width="2.5"/>
+  <path class="gnd" d="M820 265v20"/>
+  <use href="#gnd" x="820" y="285"/>
+  <text x="800" y="264" text-anchor="end">470 µF</text>
+  <text x="797" y="200" class="s">VLED</text>
+
+  <rect x="860" y="200" width="125" height="270" rx="10" class="box"/>
+  <text x="868" y="234" class="pin">VDD</text>
+  <text x="868" y="304" class="pin">GND</text>
+  <text x="868" y="444" class="pin">DIN</text>
+  <text x="922" y="358" text-anchor="middle" class="t">Olhos</text>
+  <text x="922" y="378" text-anchor="middle">4 × WS2812B</text>
+  <text x="922" y="396" text-anchor="middle" class="s">+ chapéu, no fim</text>
+  <text x="922" y="410" text-anchor="middle" class="s">da corrente</text>
+  <path class="gnd" d="M860 300h-12v12"/>
+  <use href="#gnd" x="848" y="312"/>
+
+  <!-- dados -->
+  <path class="dat" d="M560 440h80M684 440h176"/>
+  <rect x="640" y="432" width="44" height="16" class="res"/>
+  <text x="662" y="424" text-anchor="middle">330 Ω</text>
+
+  <!-- como funciona -->
+  <rect x="30" y="575" width="955" height="140" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="48" y="602" class="t">Como desliga sem gastar</text>
+  <text x="48" y="626"><tspan class="pin">Ligado:</tspan> o D10 fica alto, o 2N7002 conduz e puxa o gate do AO3401 para o GND, e os LEDs recebem a bateria.</text>
+  <text x="48" y="648"><tspan class="pin">Desligado (deep sleep):</tspan> o D10 fica solto e os dois resistores de 100 kΩ apagam os MOSFETs. Os LEDs ficam sem energia nenhuma.</text>
+  <text x="48" y="670"><tspan class="pin">O que sobra:</tspan> uns 55 µA, do deep sleep do XIAO (~44 µA) e do divisor (~10 µA). Dá mais de um ano parado; a bateria se descarrega sozinha antes.</text>
+  <text x="48" y="692"><tspan class="pin">Chave opcional:</tspan> corta tudo (0 µA) para guardar ou transportar. Desligada, a bateria não carrega pelo USB-C.</text>
+</svg>

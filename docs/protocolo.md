@@ -82,6 +82,10 @@ por UDP em `127.0.0.1:47321` (mude com `COMPANION_PORT`). Cada datagrama é um c
 ao remetente com o JSON do Companion, ou `{"connected":false}` se ele não estiver conectado. Quando a conexão volta, a
 ponte reenvia o último estado. O log fica em `~/.cache/claude-companion/bridge.log`.
 
+A ponte também atende HTTP na mesma porta (TCP), para o portal, que não fala UDP: `GET /status` devolve o JSON e
+`POST /send`, com o comando no corpo, manda o comando. Só o portal local (`http://localhost:*`) e o publicado
+(`https://patogordo.github.io`) passam no CORS; outra origem recebe 403.
+
 Com `COMPANION_SIM=localhost:4000` no ambiente, a ponte fala com o firmware rodando no Wokwi em vez do Bluetooth: manda
 os comandos pela serial simulada (a porta `rfc2217ServerPort` do `firmware/wokwi.toml`) e responde ao `status` com a
 linha de status que o firmware imprime.

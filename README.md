@@ -56,6 +56,15 @@ Portal no navegador ───────────── Web Bluetooth ──
 
 O protocolo (UUIDs, comandos, status) está em [`docs/protocolo.md`](docs/protocolo.md).
 
+## Imprimir o corpo
+
+<p align="center"><img src="docs/screenshots/3d-frente.png" alt="O Companion impresso em 3D, de frente" width="360"></p>
+
+O corpo, a tampa, os difusores dos olhos e as tampinhas dos tubos de luz estão em `3d/` (STL), já na posição de
+imprimir e sem suporte. Material, cores, configurações e onde vai cada componente:
+[`docs/impressao-3d.md`](docs/impressao-3d.md). O modelo é paramétrico: mude as medidas no começo do `3d/gerar.py` e
+rode `uv run 3d/gerar.py`.
+
 ## Simular no Wokwi
 
 Precisa do [arduino-cli](https://arduino.github.io/arduino-cli/) com o core do ESP32 e a biblioteca Adafruit
@@ -126,7 +135,12 @@ pnpm install
 pnpm dev        # http://localhost:3500
 ```
 
-Use o Chrome ou o Edge, no computador ou no Android: Safari, Firefox e iPhone não têm Web Bluetooth. O portal está
+Use o Chrome ou o Edge, no computador ou no Android: Safari, Firefox e iPhone não têm Web Bluetooth.
+
+**Conectar pela ponte:** com a ponte do plugin rodando (o Claude Code aberto com o plugin, ou
+`plugin/bin/companion bridge`), o portal fala com ela em `http://localhost:47321`. É assim que ele alcança o simulador
+do Wokwi (`COMPANION_SIM=localhost:4000 plugin/bin/companion bridge`), e funciona em qualquer navegador. O Chrome pode
+pedir permissão para o site acessar a rede local. O portal está
 publicado em [patogordo.github.io/ClaudeCodeCompanion](https://patogordo.github.io/ClaudeCodeCompanion/): o workflow
 `.github/workflows/pages.yml` roda formatação, tipos e testes em todo push e publica na `main`. Em outro lugar,
 `pnpm generate` gera um site estático em `.output/public`, que precisa de HTTPS (o Web Bluetooth exige).
@@ -142,7 +156,8 @@ publicado em [patogordo.github.io/ClaudeCodeCompanion](https://patogordo.github.
 | `app/app.vue` | O portal |
 | `shared/protocol.ts` | UUIDs, estados e validação do status, usados pelo portal e pelos testes |
 | `tests/` | Confere que firmware, plugin e portal falam o mesmo protocolo |
-| `docs/` | Hardware, protocolo e capturas de tela |
+| `3d/` | STL do corpo para imprimir e o `gerar.py`, que gera os STL |
+| `docs/` | Hardware, energia, impressão 3D, protocolo e capturas de tela |
 | `public/` | Logo e ícones |
 
 ## Licença

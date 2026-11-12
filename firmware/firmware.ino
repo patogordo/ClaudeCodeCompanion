@@ -173,6 +173,7 @@ void bootAnimation() {
 }
 
 // ---------------- Estado e status ----------------
+void handle(String cmd);
 String statusJson() {
   String i2c;
   for (int i = 0; i < i2cCount; i++) i2c += (i ? "," : "") + String(i2cFound[i]);
@@ -182,10 +183,27 @@ String statusJson() {
   return buf;
 }
 
+// Avisa a mudança nos dois caminhos: notificação no BLE e uma linha na serial (a ponte do simulador guarda a última)
 void publishStatus() {
+  String json = statusJson();
+  Serial.println(json);
   if (!statusChar) return;
-  statusChar->setValue(statusJson().c_str());
+  statusChar->setValue(json.c_str());
   statusChar->notify();
+}
+
+// Junta os caracteres até o fim da linha, sem esperar: um comando que chega picotado não vira dois
+void readSerial() {
+  static String line;
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (line.length()) handle(line);
+      line = "";
+    } else if (line.length() < 31) {
+      line += c;
+    }
+  }
 }
 
 void setState(State s) {
@@ -316,7 +334,6 @@ void startBle() {
 // ---------------- Setup e loop ----------------
 void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(20);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
     // acordou pelo botão: só liga se ele continuar apertado (um esbarrão não liga)
@@ -353,7 +370,7 @@ void loop() {
   uint32_t now = millis();
   Line line;
   while (xQueueReceive(inbox, &line, 0)) handle(line.text);
-  if (Serial.available()) handle(Serial.readStringUntil('\n'));
+  readSerial();
   checkButton(now);
   soundTick(now);
 

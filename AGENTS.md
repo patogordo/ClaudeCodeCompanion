@@ -26,6 +26,7 @@ pnpm firmware            # arduino-cli compile para firmware/build
 pnpm sim                 # Wokwi no terminal, comandos pela serial (precisa de WOKWI_CLI_TOKEN)
 pnpm sim:test            # cenário do Wokwi: liga, obedece, desliga e liga
 claude plugin validate . # marketplace e plugin
+uv run 3d/gerar.py       # STL do corpo (3d/), a partir das medidas no começo do script
 ```
 
 Antes de entregar: `pnpm format`, `pnpm typecheck`, `pnpm test`; se mexeu no firmware, `pnpm firmware` e
@@ -45,6 +46,9 @@ Antes de entregar: `pnpm format`, `pnpm typecheck`, `pnpm test`; se mexeu no fir
   `delay()`. O callback do BLE só põe o comando na fila `inbox`; quem mexe nos LEDs é o loop.
 - **O que vem do Companion passa pelo `parseStatus`** antes de ir para a tela do portal.
 - **Bateria:** desliga sozinho abaixo de `LOW_BATTERY_MV` por três leituras seguidas. Não tire essa proteção.
+- **O 3D sai do `3d/gerar.py`**: mude as medidas lá e gere de novo, nunca edite um STL na mão. As peças saem na
+  posição de imprimir sem suporte; o script confere o tamanho de cada uma. O furo do USB-C da tampa depende da altura
+  do XIAO (`USB_Y`).
 - **Nada de dado pessoal** em código, commits, exemplos ou testes. O protocolo só leva o estado, nunca conteúdo do
   Claude.
 - O nome do plugin é `companion`: o Claude Code recusa nomes de plugin que começam com `claude-`.

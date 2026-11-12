@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Uma página: conecta ao Companion pelo Web Bluetooth, mostra o estado (os olhos da tela imitam os de verdade), a
-// bateria e os superpoderes, e ajusta volume e brilho. Os comandos são os mesmos do plugin (docs/protocolo.md).
+// Uma página: conecta ao Companion pelo Web Bluetooth (ou pela ponte local do plugin, que também alcança o simulador),
+// mostra o estado (os olhos da tela imitam os de verdade), a bateria e os superpoderes, e ajusta volume e brilho. Os
+// comandos são os mesmos do plugin (docs/protocolo.md).
 import {
   COMMAND_UUID,
   SERVICE_UUID,
@@ -15,15 +16,20 @@ import {
   type Status,
 } from '#shared/protocol'
 
-type Conn = 'idle' | 'unsupported' | 'connecting' | 'ready' | 'lost' | 'failed'
+type Conn = 'idle' | 'unsupported' | 'connecting' | 'ready' | 'lost' | 'failed' | 'noBridge' | 'bridgeEmpty'
 const CONN_TEXT: Record<Conn, string> = {
   idle: 'Desconectado',
-  unsupported: 'Este navegador não tem Web Bluetooth. Use o Chrome ou o Edge, no computador ou no Android.',
+  unsupported:
+    'Este navegador não tem Web Bluetooth (use o Chrome ou o Edge), mas a conexão pela ponte funciona em qualquer um.',
   connecting: 'Conectando…',
   ready: 'Conectado',
   lost: 'A conexão caiu. O Companion está ligado e por perto?',
   failed: 'Não deu para conectar. Ligue o Companion (segure o botão por 1 s) e tente de novo.',
+  noBridge: 'Ponte não encontrada. Abra o Claude Code com o plugin, ou rode plugin/bin/companion bridge.',
+  bridgeEmpty:
+    'A ponte está rodando, mas o Companion não respondeu. Ele está ligado? (No simulador, segure o botão por 1 s.)',
 }
+const BRIDGE = 'http://localhost:47321' // a ponte do plugin (plugin/bin/companion bridge), em HTTP
 
 const conn = ref<Conn>('idle')
 const status = ref<Status | null>(null)
@@ -32,6 +38,8 @@ const volume = ref(60)
 const brightness = ref(40)
 let sliding = false // não puxa o controle da mão de quem está arrastando
 const { baseURL } = useRuntimeConfig().app
+const hasBluetooth = ref(true)
+const via = ref<'ble' | 'bridge' | null>(null)
 let device: BluetoothDevice | undefined
 let commandChar: BluetoothRemoteGATTCharacteristic | undefined
 let statusChar: BluetoothRemoteGATTCharacteristic | undefined
@@ -47,7 +55,8 @@ const battery = computed(() => {
 })
 
 onMounted(() => {
-  if (!navigator.bluetooth) conn.value = 'unsupported'
+  hasBluetooth.value = !!navigator.bluetooth
+  if (!hasBluetooth.value) conn.value = 'unsupported'
 })
 
 // O Chrome recusa duas operações GATT ao mesmo tempo: tudo passa por esta fila
@@ -69,6 +78,7 @@ async function connect() {
     statusChar = await service.getCharacteristic(STATUS_UUID)
     statusChar.addEventListener('characteristicvaluechanged', () => refresh())
     await statusChar.startNotifications()
+    via.value = 'ble'
     await refresh()
     conn.value = 'ready'
   } catch (e) {
@@ -77,41 +87,85 @@ async function connect() {
   }
 }
 
+// Pela ponte: o portal pergunta o status a cada segundo (a ponte não avisa quando muda) e só dá a conexão por perdida
+// depois de 3 perguntas seguidas sem resposta
+let misses = 0
+async function connectBridge() {
+  conn.value = 'connecting'
+  misses = 0
+  try {
+    const s = parseStatus(await (await fetch(`${BRIDGE}/status`)).text())
+    if (!s) {
+      conn.value = 'bridgeEmpty'
+      return
+    }
+    via.value = 'bridge'
+    show(s)
+    conn.value = 'ready'
+    while (via.value === 'bridge') {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (via.value === 'bridge') await refresh()
+    }
+  } catch {
+    conn.value = 'noBridge'
+  }
+}
+
 function disconnect() {
-  device?.removeEventListener('gattserverdisconnected', onLost)
-  device?.gatt?.disconnect()
+  if (via.value === 'ble') {
+    device?.removeEventListener('gattserverdisconnected', onLost)
+    device?.gatt?.disconnect()
+  }
+  via.value = null
   status.value = null
   conn.value = 'idle'
 }
 
 function onLost() {
+  via.value = null
   status.value = null
   conn.value = 'lost'
 }
 
-// A notificação só avisa que mudou; o JSON vem inteiro pela leitura, qualquer que seja o MTU
-async function refresh() {
-  if (!statusChar) return
-  try {
-    const value = await gatt(() => statusChar!.readValue())
-    const s = parseStatus(new TextDecoder().decode(value))
-    if (!s) return
-    status.value = s
-    if (!sliding) {
-      volume.value = s.vol
-      brightness.value = s.bri
-    }
-  } catch {
-    // a conexão caiu no meio: o gattserverdisconnected cuida
+function show(s: Status) {
+  status.value = s
+  if (!sliding) {
+    volume.value = s.vol
+    brightness.value = s.bri
   }
 }
 
-async function send(text: string) {
-  if (!commandChar) return
+// No BLE, a notificação só avisa que mudou; o JSON vem inteiro pela leitura, qualquer que seja o MTU
+async function refresh() {
   try {
-    await gatt(() => commandChar!.writeValueWithResponse(new TextEncoder().encode(text)))
+    const text =
+      via.value === 'bridge'
+        ? await (await fetch(`${BRIDGE}/status`)).text()
+        : new TextDecoder().decode(await gatt(() => statusChar!.readValue()))
+    const s = parseStatus(text)
+    if (s) {
+      misses = 0
+      show(s)
+    } else if (via.value === 'bridge') missed() // a ponte não teve resposta do Companion
   } catch {
-    // idem
+    if (via.value === 'bridge') missed() // no BLE, quem cuida é o gattserverdisconnected
+  }
+}
+
+function missed() {
+  if (++misses >= 3) onLost()
+}
+
+async function send(text: string) {
+  try {
+    if (via.value === 'bridge') {
+      await fetch(`${BRIDGE}/send`, { method: 'POST', body: text })
+      await refresh() // mostra na hora, sem esperar a próxima pergunta
+    } else if (commandChar) {
+      await gatt(() => commandChar!.writeValueWithResponse(new TextEncoder().encode(text)))
+    }
+  } catch {
+    // a conexão caiu no meio: quem cuida é o refresh ou o gattserverdisconnected
   }
 }
 
@@ -175,11 +229,21 @@ function powerOff() {
         </template>
       </p>
       <div class="connect">
-        <button v-if="!ready" :disabled="conn === 'unsupported' || conn === 'connecting'" @click="connect">
-          Conectar ao Companion
-        </button>
+        <template v-if="!ready">
+          <button :disabled="!hasBluetooth || conn === 'connecting'" @click="connect">Conectar ao Companion</button>
+          <button
+            class="ghost"
+            :disabled="conn === 'connecting'"
+            title="Pela ponte do plugin: alcança o simulador do Wokwi e funciona sem Web Bluetooth"
+            @click="connectBridge"
+          >
+            Conectar pela ponte
+          </button>
+        </template>
         <button v-else class="ghost" @click="disconnect">Desconectar</button>
-        <span class="status" :class="conn">{{ CONN_TEXT[conn] }}</span>
+        <span class="status" :class="conn">{{
+          ready && via === 'bridge' ? 'Conectado pela ponte' : CONN_TEXT[conn]
+        }}</span>
         <span v-if="battery" class="battery">{{ battery }}</span>
       </div>
     </section>
@@ -446,7 +510,9 @@ button.danger {
 }
 .status.unsupported,
 .status.lost,
-.status.failed {
+.status.failed,
+.status.noBridge,
+.status.bridgeEmpty {
   color: var(--danger);
 }
 .battery {

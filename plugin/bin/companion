@@ -18,6 +18,7 @@ firmware rodando no Wokwi em vez do Bluetooth. Comandos em docs/protocolo.md.
 import asyncio
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -31,6 +32,7 @@ COMMAND_UUID = "5d1e0001-23fd-4dbe-89ca-ba268b36c947"
 STATUS_UUID = "5d1e0002-23fd-4dbe-89ca-ba268b36c947"
 STATES = ("idle", "thinking", "done", "question", "error")
 SIM = os.environ.get("COMPANION_SIM")  # host:porta da serial do Wokwi; sem isso, a ponte usa o Bluetooth
+PORTAL_ORIGINS = r"https://patogordo\.github\.io|http://(localhost|127\.0\.0\.1)(:\d+)?"  # quem pode usar o HTTP
 LOG = Path(os.environ.get("COMPANION_LOG", Path.home() / ".cache" / "claude-companion" / "bridge.log"))
 
 
@@ -41,7 +43,7 @@ def send(command: str) -> None:
 
 def status() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.settimeout(3)
+        s.settimeout(5)  # mais que os 3 s que a ponte espera pelo Companion
         s.sendto(b"status", (HOST, PORT))
         try:
             print(s.recv(512).decode())
@@ -104,14 +106,14 @@ async def bridge() -> None:
     # write(comando) e read_status() da conexão atual (BLE ou simulador); None quando desconectado
     link = {"write": None, "read_status": None, "state": None}
 
-    async def forward() -> None:
-        while True:
-            command, addr = await inbox.get()
+    lock = asyncio.Lock()  # UDP e HTTP chegam juntos; um comando por vez na conexão
+
+    async def run(command: str) -> bytes | None:
+        """Repassa o comando ao Companion; para `status`, devolve o JSON dele."""
+        async with lock:
             try:
                 if command == "status":
-                    reply = await link["read_status"]() if link["read_status"] else b'{"connected":false}'
-                    transport.sendto(reply, addr)
-                    continue
+                    return await link["read_status"]() if link["read_status"] else b'{"connected":false}'
                 if command in STATES:
                     link["state"] = command  # reenviado quando reconectar
                 if link["write"]:
@@ -119,7 +121,53 @@ async def bridge() -> None:
             except Exception as e:  # o Companion desligou no meio: a conexão volta sozinha
                 log("erro ao enviar", command, repr(e))
                 if command == "status":
-                    transport.sendto(b'{"connected":false}', addr)
+                    return b'{"connected":false}'
+        return None
+
+    async def forward() -> None:
+        while True:
+            command, addr = await inbox.get()
+            reply = await run(command)
+            if reply is not None:
+                transport.sendto(reply, addr)
+
+    # HTTP para o portal: o navegador não fala UDP, nem Bluetooth com o simulador.
+    # GET /status devolve o JSON; POST /send manda o comando do corpo. Só o portal (local ou publicado) é aceito.
+    async def http(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        try:
+            head = (await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), 5)).decode(errors="ignore")
+            lines = head.split("\r\n")
+            method, path = lines[0].split(" ")[:2]
+            headers = {k.strip().lower(): v.strip() for k, _, v in (line.partition(":") for line in lines[1:] if line)}
+            body = await reader.readexactly(min(int(headers.get("content-length") or 0), 64))
+            origin = headers.get("origin", "")
+            if origin and not re.fullmatch(PORTAL_ORIGINS, origin):
+                code, reply = "403 Forbidden", b""
+            elif method == "OPTIONS":
+                code, reply = "204 No Content", b""
+            elif method == "GET" and path == "/status":
+                code, reply = "200 OK", await run("status") or b""
+            elif method == "POST" and path == "/send":
+                await run(body.decode(errors="ignore").strip()[:31])
+                code, reply = "204 No Content", b""
+            else:
+                code, reply = "404 Not Found", b""
+            cors = (
+                f"Access-Control-Allow-Origin: {origin}\r\nAccess-Control-Allow-Methods: GET, POST\r\n"
+                "Access-Control-Allow-Headers: content-type\r\nAccess-Control-Allow-Private-Network: true\r\n"
+                if origin and code != "403 Forbidden"
+                else ""
+            )
+            writer.write(
+                f"HTTP/1.1 {code}\r\n{cors}Content-Type: application/json\r\nContent-Length: {len(reply)}\r\n"
+                f"Connection: close\r\n\r\n".encode()
+                + reply
+            )
+            await writer.drain()
+        except Exception as e:  # pedido malformado ou conexão que caiu: só fecha
+            log("http:", repr(e))
+        finally:
+            writer.close()
 
     async def connect_ble() -> None:
         from bleak import BleakClient, BleakScanner
@@ -157,17 +205,21 @@ async def bridge() -> None:
         while True:
             try:
                 reader, writer = await asyncio.open_connection(host or "localhost", int(port))
-                latest: asyncio.Queue = asyncio.Queue(maxsize=1)
+                # o firmware imprime o status a cada mudança: a ponte guarda o último e responde na hora, sem
+                # depender da velocidade do simulador (que fica lento com o VS Code em segundo plano)
+                latest = {"status": None}
+                arrived = asyncio.Event()
 
                 async def write(command: str) -> None:
                     writer.write(command.encode() + b"\n")
                     await writer.drain()
 
                 async def read_status() -> bytes:
-                    while not latest.empty():  # descarta status velho (o do boot, por exemplo)
-                        latest.get_nowait()
-                    await write("status")
-                    return await asyncio.wait_for(latest.get(), 3)
+                    if not latest["status"]:  # acabou de conectar: pergunta uma vez
+                        arrived.clear()
+                        await write("status")
+                        await asyncio.wait_for(arrived.wait(), 3)
+                    return latest["status"]
 
                 log("conectado ao simulador em", target)
                 link.update(write=write, read_status=read_status)
@@ -176,9 +228,10 @@ async def bridge() -> None:
                 async for raw in reader:  # a serial é texto; o que não é status (log, boot) é descartado
                     line = raw.decode(errors="ignore")
                     if '{"fw"' in line:
-                        if latest.full():
-                            latest.get_nowait()
-                        latest.put_nowait(line[line.index('{"fw"') :].strip().encode())
+                        latest["status"] = line[line.index('{"fw"') :].strip().encode()
+                        arrived.set()
+                    elif "desligando" in line:  # desligou pelo botão: sem status até ligar de novo
+                        latest["status"] = None
                 log("simulador desconectado")
             except Exception as e:  # simulador parado ou reiniciando
                 log("simulador:", repr(e))
@@ -186,8 +239,10 @@ async def bridge() -> None:
                 link.update(write=None, read_status=None)
             await asyncio.sleep(2)
 
-    log(f"ponte ouvindo em {HOST}:{PORT}" + (f", simulador em {SIM}" if SIM else ""))
-    await asyncio.gather(forward(), connect_sim(SIM) if SIM else connect_ble())
+    server = await asyncio.start_server(http, HOST, PORT)  # TCP, na mesma porta do UDP
+    log(f"ponte ouvindo em {HOST}:{PORT} (UDP e HTTP)" + (f", simulador em {SIM}" if SIM else ""))
+    async with server:
+        await asyncio.gather(forward(), connect_sim(SIM) if SIM else connect_ble())
 
 
 def main(argv: list[str]) -> int:

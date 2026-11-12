@@ -10,12 +10,14 @@ Wokwi (`firmware/diagram.json`) é a versão simplificada deste circuito; as dif
 | Peça | Qtd. | Para quê |
 | --- | --- | --- |
 | Seeed Studio XIAO ESP32-C3 | 1 | O cérebro. Use a antena que vem junto: sem ela o Bluetooth fica fraco |
-| Corpo do mascote, impresso em 3D (PLA laranja) | 1 | 16 × 10 pixels. Com o pixel de 7,5 mm, o corpo tem 12 cm e cada olho, 7,5 × 15 mm |
-| LED WS2812B 5050 (ou um pedaço de fita de 60 LEDs/m) | 4 | Dois atrás de cada olho, um em cima do outro |
-| Difusor branco | 2 | Acrílico leitoso ou PLA branco de 1 mm nas janelinhas dos olhos, a uns 5 mm dos LEDs |
+| Corpo, tampa, difusores e tampinhas dos olhos, impressos em 3D | 1 jogo | `3d/*.stl`: 128 × 80 × 52 mm, olhos de 8 × 16 mm. Material, cores e montagem em [`impressao-3d.md`](impressao-3d.md) |
+| Fita WS2812B de 144 LEDs/m | 2 pedaços de 2 LEDs | Um pedaço em cada olho, um LED em cima do outro, colado na tampinha do tubo de luz |
+| Mini protoboard de 170 furos | 1 | Cabe no chão do corpo. Para a versão final, placa perfurada soldada |
+| Adaptador SOT-23 para DIP | 2 | Para usar os MOSFETs (que são SMD) na protoboard |
+| Parafuso M2 × 8 autoatarraxante | 4 | Fecham a tampa |
 | Bateria LiPo 1S 3,7 V, 500 a 1000 mAh, com proteção | 1 | Soldada nos pads BAT+ e BAT− embaixo do XIAO, que carrega pelo USB-C |
 | Buzzer piezo passivo de 12 mm | 1 | Os sons. Piezo puxa pouca corrente e vai direto no pino; buzzer magnético precisa de transistor |
-| Botão táctil 6×6 mm | 1 | Liga e desliga |
+| Botão de pulso de painel, 7 mm | 1 | Liga e desliga, na tampa de trás |
 | MOSFET P AO3401 e MOSFET N 2N7002 | 1 + 1 | Cortam a alimentação dos LEDs com o Companion desligado |
 | Resistor 220 kΩ | 2 | Divisor para medir a bateria |
 | Resistor 100 kΩ | 2 | Pull-up do gate do AO3401 e pull-down do gate do 2N7002 |
@@ -46,16 +48,18 @@ LEDs cada olho tem (de cima para baixo) e `HAT` é onde o chapéu começa (`firm
 
 ## Energia
 
-```
-BAT+ ─┬──────────────────────────► pad BAT+ do XIAO (o USB-C carrega a bateria)
-      ├── 220k ──┬── 220k ── GND
-      │          └───────────────► A0
-      └── AO3401 S      D ───────► VLED: olhos, chapéu e 470 µF
-                 G ─┬─ 100k ─ BAT+
-                    └─ 2N7002 D    S ─ GND
-                              G ─┬─ D10
-                                 └─ 100k ─ GND
-```
+![Ligações de energia: bateria nos pads do XIAO, divisor no A0, botão no D1 e os MOSFETs que cortam os LEDs](energia.svg)
+
+1. **Bateria:** solde o fio vermelho (+) no pad BAT+ e o preto (−) no BAT−, os dois embaixo do XIAO. Confira a
+   polaridade com um multímetro antes: conectores JST de bateria não têm padrão entre fabricantes, e o XIAO não tem
+   proteção contra inversão. O USB-C do próprio XIAO carrega a bateria e, plugado, alimenta tudo.
+2. **Medição:** dois resistores de 220 kΩ em série entre o BAT+ e o GND, com o meio no A0.
+3. **Botão:** entre o D1 e o GND, com 10 kΩ do D1 para o 3V3.
+4. **Corte dos LEDs:** o AO3401 (MOSFET P) fica entre o BAT+ e o VLED, que alimenta os olhos, o chapéu e o capacitor de
+   470 µF. O gate dele tem 100 kΩ para o BAT+ e vai ao dreno do 2N7002 (MOSFET N), que tem a fonte no GND e o gate no
+   D10, com 100 kΩ para o GND.
+5. **Chave de transporte (opcional):** uma chave deslizante no fio + da bateria corta tudo. Desligada, a bateria não
+   carrega pelo USB-C.
 
 Ligado, o firmware põe o D10 em nível alto: o 2N7002 conduz, puxa o gate do AO3401 para o GND e os LEDs recebem a
 bateria. Desligado, o C3 entra em deep sleep, o D10 fica solto e os dois resistores de 100 kΩ apagam os MOSFETs. Sem
@@ -63,6 +67,12 @@ esse corte, cada WS2812B apagado ainda consome perto de 1 mA: os 4 dos olhos e u
 500 mAh em poucos dias, com o Companion desligado. Com ele, desligado fica em dezenas de µA (o deep sleep do C3 e os
 10 µA do divisor), o que dá meses. Ligado, o repouso deixa os LEDs apagados, então quem mais gasta é o tempo em que o
 Claude está trabalhando.
+
+O conector das costas pega o 3V3 do XIAO, que continua ligado no deep sleep: um acessório com LED de power (comum nas
+plaquinhas Qwiic) gasta com o Companion desligado. Corte o jumper do LED do acessório ou use a chave de transporte.
+
+Ligado, o C3 com o Bluetooth gasta dezenas de mA, e os LEDs acesos somam mais: na mesa, deixe no USB-C, que carrega
+enquanto usa.
 
 Os LEDs vão na bateria, não no pino 5V: o 5V do XIAO só tem tensão com o USB ligado. Com a bateria cheia (4,2 V), o dado
 de 3,3 V fica no limite do que o WS2812B entende como nível alto; se os olhos piscarem cores erradas, ponha um 74AHCT125
