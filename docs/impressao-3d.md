@@ -82,8 +82,8 @@ Visto por trás, com a tampa aberta:
 - **Mini protoboard de 170 furos:** no chão, entre os dois trilhos. Com a tampa aberta, deslize a protoboard por
   trás, por baixo das abas dos trilhos, até encostar no rosto; fechada, a tampa a segura do outro lado. Os trilhos têm a
   largura da protoboard com os dentinhos de encaixe, com 0,3 mm de folga, e as abas cobrem 2,5 mm da borda sem furos:
-  mesmo encostada num trilho, ela não sai de baixo da aba do outro. A fita dupla face fica opcional.
-  Os trilhos contam com uma de 48 × 36 × 8,5 mm (a largura com os dentinhos): se a sua for diferente, mude `PB` no
+  mesmo encostada num trilho, ela não sai de baixo da aba do outro. Deixe a fita dupla face com o papel protetor: a altura conta com ela, então a protoboard desliza sem grudar e fica sem folga.
+  Os trilhos contam com uma de 48 × 36 × 9 mm (a largura com os dentinhos, a altura com a fita dupla face): se a sua for diferente, mude `PB` no
   `gerar.py`. Embaixo da SuperMini, os componentes podem ter até 8 mm de altura; no resto, até uns 17 mm.
 - **ESP32-C3 SuperMini:** deitada no suporte da tampa, com o USB-C para fora. As pernas (a barra de pinos, até
   10 mm) descem dos lados do apoio do meio, que é o único que encosta na placa por baixo, e ficam acima dos
@@ -108,7 +108,7 @@ Visto por trás, com a tampa aberta:
 
 ## Protoboard ou placa soldada
 
-A mini protoboard de 170 furos (48 × 36 × 8,5 mm) cabe e é ótima para o protótipo, mas com o tempo os jumpers e os
+A mini protoboard de 170 furos (48 × 36 × 9 mm, com a fita dupla face) cabe e é ótima para o protótipo, mas com o tempo os jumpers e os
 componentes soltam. Para a versão final, solde tudo numa placa perfurada do mesmo tamanho. O suporte da placa fica
 logo acima dela (`MCU_Y` no `gerar.py`).
 

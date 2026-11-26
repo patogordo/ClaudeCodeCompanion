@@ -65,7 +65,7 @@ GUIDE = 1.6  # espessura das guias, do apoio e da parede de trás do suporte
 
 # Protoboard de 170 furos no chão, entre dois trilhos com uma aba por cima da borda (que não tem furos). Entra
 # deslizando por trás, com a tampa aberta, e fica presa entre o rosto e a tampa; a fita dupla face vira opcional
-PB = (36.0, 48.0, 8.5)  # largura (x, com os dentinhos), comprimento (z) e altura: medidas de uma de 170 furos
+PB = (36.0, 48.0, 9.0)  # largura (x, com os dentinhos), comprimento (z) e altura (com a fita dupla face)
 PB_GAP = 0.3  # folga de cada lado: a largura já conta os dentinhos, então o trilho fica justo
 PB_TOOTH = 1.0  # quanto o dentinho sai da lateral (36 mm com ele, 35 sem)
 PB_LIP = 2.5  # quanto a aba do trilho cobre a borda de cima (a borda sem furos tem uns 4 mm)
