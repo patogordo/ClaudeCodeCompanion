@@ -77,7 +77,8 @@ Visto por trás, com a tampa aberta:
   aba com uma gota de cola. Cada olho leva duas plaquinhas de LED WS2812B (de fita de 30 LEDs/m, 10 × 33 mm, um LED
   cada), deitadas, uma em cima da outra, coladas no rebaixo da tampinha com os LEDs virados para fora. Na de cima, a
   entrada (DIN) fica na ponta do canal dos fios, a que aponta para o meio do corpo; a de baixo vai girada, com a DIN
-  na outra ponta, junto da DO da de cima: ligue as duas com três fios curtos (+5V com +5V, DO com DIN, GND com GND).
+  na outra ponta, junto da DO da de cima: ligue as duas com três fios curtos (+5V com +5V, DO com DIN, GND com GND), como no desenho
+  [`ligacao-dos-olhos.svg`](ligacao-dos-olhos.svg).
   Os três fios do olho saem pelo canal. Empurre a tampinha no tubo até a aba encostar: as nervuras seguram sem cola, e
   os LEDs ficam a uns 5 mm do difusor.
 - **Fios dos olhos:** GPIO5 → olho que fica à esquerda de quem olha de frente; GPIO6 → o outro. Por trás, o olho do

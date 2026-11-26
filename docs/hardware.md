@@ -45,6 +45,12 @@ da placa na tampa (`3d/`) é do tamanho da SuperMini.
 Cada olho tem o próprio fio de dados. No firmware, `EYE_PIXELS` é quantos LEDs cada olho tem, de cima para baixo
 (`firmware/firmware.ino`).
 
+Dentro de cada olho, as duas plaquinhas ficam deitadas, uma encostada na outra. O dado entra na de cima e passa para a
+de baixo, que vai girada 180°:
+
+![As duas plaquinhas de cada olho, vistas pelo lado dos LEDs: os fios entram pela de cima, no lado do meio do corpo, e
+três fiozinhos na outra ponta levam +5V, dado e GND para a de baixo](ligacao-dos-olhos.svg)
+
 ## Energia
 
 ![Ligações de energia: bateria nos pads do XIAO, divisor no A0, botão no D1 e os MOSFETs que cortam os LEDs](energia.svg)
