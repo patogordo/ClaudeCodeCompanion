@@ -51,13 +51,13 @@ não cabem juntos nem numa mesa de 250 mm.
 | Brim | Não precisa |
 
 As espessuras já vêm do modelo: paredes de 2,4 mm nos lados, no topo e no chão, e 2 mm no rosto e na tampa. Com 3
-perímetros elas saem praticamente sólidas. As únicas pontes são o rasgo do superpoder da cabeça (8,4 mm) e a frente
-dos difusores, que são ocos (5,4 mm); qualquer impressora faz.
+perímetros elas saem praticamente sólidas. A única ponte é a frente dos difusores, que são ocos (5,4 mm);
+qualquer impressora faz.
 
 ## Onde vai cada componente
 
 <p align="center">
-  <img src="screenshots/3d-dentro.png" alt="Por dentro, sem a tampa: protoboard no chão com o XIAO, bateria na lateral, buzzer, botão, Qwiic, superpoder da cabeça e as tampinhas dos olhos, com os LEDs, encaixadas nos tubos de luz" width="560">
+  <img src="screenshots/3d-dentro.png" alt="Por dentro, sem a tampa: protoboard no chão com o XIAO, bateria na lateral, buzzer, botão, Qwiic e as tampinhas dos olhos, com os LEDs, encaixadas nos tubos de luz" width="560">
 </p>
 
 Visto por trás, com a tampa aberta:
@@ -85,7 +85,7 @@ Visto por trás, com a tampa aberta:
   berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até encostar: as
   nervuras seguram sem cola, e os entalhes deixam passar as pernas. Ponha a capa por fora, pelo furo. O furo conta com
   uma capa redonda de 13 mm; se a sua for de outro tamanho, meça e mude o `CAP_D` no `gerar.py`.
-- **Rasgos dos superpoderes** (topo e tampa): ficam vazios por enquanto.
+- **Rasgo do superpoder das costas** (na tampa): fica vazio por enquanto.
 - **Tampa:** 4 parafusos M2 × 8 autoatarraxantes nas torres dos cantos.
 
 ## Protoboard ou placa soldada

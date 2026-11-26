@@ -129,8 +129,6 @@ def corpo() -> Manifold:
     for x, y in BOSSES:  # torres dos parafusos da tampa (M2 × 8 autoatarraxante)
         shell += cyl(x, y, FACE, SHELL, 6.5)
         shell -= cyl(x, y, SHELL - 10, SHELL + 1, 1.7)
-    # superpoder da cabeça: rasgo para uma barra de pinos fêmea de 3 vias (VLED, dados, GND)
-    shell -= box(CX - 4.2, BODY[3] * P - WALL - 1, SHELL / 2 - 1.6, CX + 4.2, BODY[3] * P + 1, SHELL / 2 + 1.6)
     return shell
 
 
