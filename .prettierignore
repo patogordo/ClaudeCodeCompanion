@@ -5,3 +5,6 @@ pnpm-lock.yaml
 .output
 firmware
 plugin/bin
+
+# Configuração do fatiador, como ele grava
+3d/bambu-projeto.json

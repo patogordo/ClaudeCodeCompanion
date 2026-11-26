@@ -18,9 +18,9 @@ na ordem de montar.
 | `corpo.stl` | Laranja | Com o rosto para baixo. O rosto pega a textura da mesa (numa PEI texturizada fica fosco e bonito) |
 | `tampa-encaixe.stl` ou `tampa-parafusos.stl` | Laranja | Com o lado de fora para baixo (o berço do botão e o suporte da placa ficam em cima) |
 | `difusores.stl` (os 2 olhos, ocos) | Branco | Com a aba para baixo |
-| `tampas-dos-olhos.stl` (as 2) | Qualquer; branco reflete mais luz | Com a aba para baixo (o rebaixo dos LEDs fica em cima) |
-| `trava-do-botao.stl` | Qualquer | Deitada |
-| `trava-da-placa.stl` | Qualquer | Deitada, com as linguetas para cima |
+| `tampas-dos-olhos.stl` (as 2) | Preto (branco reflete um pouco mais de luz) | Com a aba para baixo (o rebaixo dos LEDs fica em cima) |
+| `trava-do-botao.stl` | Preto | Deitada |
+| `trava-da-placa.stl` | Preto | Deitada, com as linguetas para cima |
 
 **Duas tampas, o mesmo corpo:** a de encaixe tem quatro linguetas que estalam em rebaixos das paredes de dentro do
 corpo; para abrir, ponha uma moeda na fenda embaixo, no meio da borda de trás, e levante. A de parafusos fecha com 4
@@ -28,10 +28,13 @@ parafusos M2 × 8 autoatarraxantes nas torres dos cantos, que continuam no corpo
 
 O corpo tem 128 × 80 × 51 mm na mesa e cabe em qualquer impressora, até numa de 180 × 180 mm.
 
-**Tudo de uma vez:** `mesa.stl` traz as seis peças de um Companion lado a lado, com a tampa de encaixe, em 208 × 154 mm (cabe em qualquer
-Anycubic Kobra, a partir de 220 × 220 mm). No fatiador (Anycubic Slicer Next, Orca, Bambu Studio), use **Dividir →
-Para objetos** para separar as peças. Com multicor (o ACE da Anycubic), dê o branco aos difusores. Sem multicor,
-imprima os difusores à parte, em branco, ou só a `mesa.stl` sem eles. Para 3 Companions, são 3 impressões: três corpos
+**Tudo de uma vez, já com as cores:** `mesa.3mf` é um projeto do Bambu Studio (abre também no Anycubic Slicer Next e
+no Orca) com as seis peças de um Companion lado a lado, com a tampa de encaixe, em 208 × 154 mm, e três filamentos: o
+corpo e a tampa no laranja, os olhos no branco e as tampinhas e as travas no preto. As configurações de impressão são
+as de `3d/bambu-projeto.json` (Anycubic Kobra 4, PLA); no fatiador, troque a impressora e os filamentos pelos seus, se
+forem outros. O STL não guarda cor: `mesa.stl` traz as mesmas peças sem cor, e no fatiador **Dividir → Para objetos**
+separa as peças para escolher o filamento de cada uma. Com multicor (o ACE da Anycubic), sai tudo numa impressão. Sem
+multicor, imprima as peças de cada cor à parte. Para 3 Companions, são 3 impressões: três corpos
 não cabem juntos nem numa mesa de 250 mm.
 
 ## Material e cores

@@ -11,6 +11,9 @@ docs/impressao-3d.md. Coordenadas de montagem: x da esquerda para a direita olha
 z do rosto (z = 0) para as costas.
 """
 
+import json
+import uuid
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -440,6 +443,94 @@ def save(m: Manifold, name: str, size: tuple[float, float, float]) -> None:
     print(f"{name}: {hi[0] - lo[0]:.1f} x {hi[1] - lo[1]:.1f} x {hi[2] - lo[2]:.1f} mm, {len(tri)} triângulos")
 
 
+# Cores da mesa.3mf, uma por filamento: o corpo e a tampa em laranja, os olhos em branco e as peças de dentro em preto
+COLORS = ["#D97757", "#FFFFFF", "#1A1A1A"]
+
+
+def save_3mf(pieces: list[tuple[str, Manifold, int]], name: str, bed: float = 260) -> None:
+    """Salva as peças (nome, peça já na posição da mesa, filamento de 1 a 3) num projeto do Bambu Studio, que o
+    Anycubic Slicer Next e o Orca também abrem: cada peça é um objeto com o seu filamento, e as cores dos filamentos
+    vêm de COLORS. As configurações de impressão (Anycubic Kobra 4, PLA) estão em bambu-projeto.json."""
+    lo = np.min([m.bounding_box()[:3] for _, m, _ in pieces], axis=0)
+    hi = np.max([m.bounding_box()[3:] for _, m, _ in pieces], axis=0)
+    shift = np.array([(bed - (hi[0] - lo[0])) / 2 - lo[0], (bed - (hi[1] - lo[1])) / 2 - lo[1], 0])  # centro da mesa
+    uid = lambda *k: str(uuid.uuid5(uuid.NAMESPACE_URL, "companion/" + "/".join(map(str, k))))  # o mesmo a cada vez
+    head = ('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" '
+            'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" '
+            'xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" '
+            'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p">\n')
+    files, objects, items, settings, instances = {}, [], [], [], []
+    for i, (label, m, filament) in enumerate(pieces, start=2):
+        b = np.array(m.bounding_box())
+        center = (b[:3] + b[3:]) / 2
+        mesh = m.to_mesh()
+        v = np.asarray(mesh.vert_properties)[:, :3] - center  # a peça em volta da própria origem, como o fatiador faz
+        verts = "".join(f'     <vertex x="{x:.6f}" y="{y:.6f}" z="{z:.6f}"/>\n' for x, y, z in v)
+        tris = "".join(f'     <triangle v1="{a}" v2="{c}" v3="{d}"/>\n' for a, c, d in np.asarray(mesh.tri_verts))
+        path = f"/3D/Objects/objeto_{i}.model"  # nome sem espaço nem acento: é um endereço dentro do 3MF
+        files[path[1:]] = (head + ' <metadata name="BambuStudio:3mfVersion">1</metadata>\n <resources>\n'
+                           f'  <object id="1" p:UUID="{uid(label, "mesh")}" type="model">\n   <mesh>\n    <vertices>\n'
+                           f'{verts}    </vertices>\n    <triangles>\n{tris}    </triangles>\n   </mesh>\n  </object>\n'
+                           ' </resources>\n <build/>\n</model>\n')
+        objects.append(f'  <object id="{i}" p:UUID="{uid(label)}" type="model">\n   <components>\n'
+                       f'    <component p:path="{path}" objectid="1" p:UUID="{uid(label, "part")}" '
+                       'transform="1 0 0 0 1 0 0 0 1 0 0 0"/>\n   </components>\n  </object>\n')
+        x, y, z = center + shift
+        items.append(f'  <item objectid="{i}" p:UUID="{uid(label, "item")}" '
+                     f'transform="1 0 0 0 1 0 0 0 1 {x:.6f} {y:.6f} {z:.6f}" printable="1"/>\n')
+        settings.append(f'  <object id="{i}">\n    <metadata key="name" value="{label}"/>\n'
+                        f'    <metadata key="extruder" value="{filament}"/>\n    <part id="1" subtype="normal_part">\n'
+                        f'      <metadata key="name" value="{label}"/>\n'
+                        '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>\n'
+                        '    </part>\n  </object>\n')
+        instances.append(f'    <model_instance>\n      <metadata key="object_id" value="{i}"/>\n'
+                         '      <metadata key="instance_id" value="0"/>\n'
+                         f'      <metadata key="identify_id" value="{100 + i}"/>\n'
+                         '    </model_instance>\n')
+    files["3D/3dmodel.model"] = (head + ' <metadata name="Application">BambuStudio-2.0.0.3</metadata>\n'
+                                 ' <metadata name="BambuStudio:3mfVersion">1</metadata>\n'
+                                 ' <metadata name="Title">Claude Code Companion</metadata>\n'
+                                 f' <resources>\n{"".join(objects)} </resources>\n'
+                                 f' <build p:UUID="{uid("build")}">\n{"".join(items)} </build>\n</model>\n')
+    n = len(COLORS)
+    files["Metadata/model_settings.config"] = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n' + "".join(settings) + '  <plate>\n'
+        '    <metadata key="plater_id" value="1"/>\n    <metadata key="plater_name" value=""/>\n'
+        '    <metadata key="locked" value="false"/>\n    <metadata key="filament_map_mode" value="Auto For Flush"/>\n'
+        f'    <metadata key="filament_maps" value="{" ".join(["1"] * n)}"/>\n' + "".join(instances) +
+        '  </plate>\n</config>\n')
+    # as configurações de um filamento só viram três iguais, cada um com a sua cor
+    project = json.loads((OUT / "bambu-projeto.json").read_text())
+    for key, value in project.items():
+        if key.startswith("filament_") and isinstance(value, list) and len(value) == 1:
+            project[key] = value * n
+    project["filament_colour"] = COLORS
+    project["flush_volumes_matrix"] = [str(0 if a == b else 400) for a in range(n) for b in range(n)]
+    project["flush_volumes_vector"] = project["flush_volumes_vector"][:2] * n
+    files["Metadata/project_settings.config"] = json.dumps(project, indent=4)
+    files["3D/_rels/3dmodel.model.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'relationships">\n' + "".join(f' <Relationship Target="/{f}" Id="rel-{k}" Type="http://schemas.microsoft.com/'
+                                      '3dmanufacturing/2013/01/3dmodel"/>\n'
+                                      for k, f in enumerate([f for f in files if f.startswith("3D/Objects/")], 1))
+        + '</Relationships>\n')
+    files["_rels/.rels"] = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'relationships">\n <Relationship Target="/3D/3dmodel.model" Id="rel-1" '
+        'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>\n</Relationships>\n')
+    files["[Content_Types].xml"] = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">\n <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships'
+        '+xml"/>\n <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>\n'
+        '</Types>\n')
+    with zipfile.ZipFile(OUT / name, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in ["[Content_Types].xml", "_rels/.rels", "3D/3dmodel.model", "3D/_rels/3dmodel.model.rels",
+                  *sorted(f for f in files if f.startswith(("3D/Objects/", "Metadata/")))]:
+            # data fixa: o arquivo só muda quando as peças mudam
+            z.writestr(zipfile.ZipInfo(f, date_time=(2026, 1, 1, 0, 0, 0)), files[f])
+    print(f"{name}: {len(pieces)} peças, filamentos {', '.join(COLORS)}")
+
+
 def at(m: Manifold, x: float, y: float) -> Manifold:
     """Põe o canto da peça em (x, y) na mesa."""
     lo = m.bounding_box()
@@ -481,6 +572,10 @@ if __name__ == "__main__":
     gap = 10
     body, lid, _, diff, caps, latch, mcu_latch = (parts[n][0] for n in parts)
     side = 16 * P + gap
-    plate = union([at(body, 0, 0), at(lid, 0, 10 * P + gap), at(diff, side, 0), at(caps, 12 * P + gap, 10 * P + gap),
-                   at(latch, side, 2 * P + 3.6 + gap), at(mcu_latch, side + latch_w + gap, 2 * P + 3.6 + gap)])
+    placed = [("Corpo", at(body, 0, 0), 1), ("Tampa", at(lid, 0, 10 * P + gap), 1), ("Olhos", at(diff, side, 0), 2),
+              ("Tampinhas dos olhos", at(caps, 12 * P + gap, 10 * P + gap), 3),
+              ("Trava do botão", at(latch, side, 2 * P + 3.6 + gap), 3),
+              ("Trava da placa", at(mcu_latch, side + latch_w + gap, 2 * P + 3.6 + gap), 3)]
+    plate = union([m for _, m, _ in placed])
     save(plate, "mesa.stl", (max(side + diff_w, 12 * P + gap + cap_w), 10 * P + gap + 8 * P, SHELL))
+    save_3mf(placed, "mesa.3mf")  # a mesma mesa, com a cor de cada peça
