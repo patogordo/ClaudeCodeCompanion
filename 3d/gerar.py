@@ -17,7 +17,7 @@ import numpy as np
 from manifold3d import Manifold
 
 P = 8.0  # tamanho do pixel: o mascote tem 16 × 10 pixels (128 × 80 mm)
-D = 52.0  # profundidade total, do rosto às costas
+D = 53.0  # profundidade total, do rosto às costas: cabe a protoboard de 48 mm deitada, com 0,5 mm de folga
 FACE = 2.0  # espessura do rosto (o difusor fica rente a ele)
 WALL = 2.4  # paredes dos lados, do topo e do chão
 LID = 2.0  # espessura da tampa de trás
@@ -51,15 +51,23 @@ CRADLE = BTN_BODY + LATCH + 1.0  # altura do berço: a trava entra até encostar
 # Placa: ESP32-C3 SuperMini, deitada num suporte na tampa, com o USB-C rente à tampa por fora. A placa entra por cima
 # no fundo do suporte e desliza até o USB-C entrar no furo; a trava da placa ocupa a folga que sobra atrás
 MCU = (18.0, 22.52)  # largura (x) e comprimento (z)
-MCU_PCB = 1.0  # espessura da placa; a trava assenta em cima dela, então outra espessura também serve
-MCU_Y = 40.0  # face de baixo da placa: embaixo dela fica a protoboard
+MCU_PCB = 0.8  # espessura da placa; com o USB-C dá 4 mm (medido). A trava assenta em cima da placa e se ajusta
+MCU_Y = 46.0  # face de baixo da placa: as pernas ficam a 9 mm da protoboard, com espaço para os componentes
+MCU_LEGS = 10.0  # as pernas (barra de pinos) passam isso da placa, dos lados do apoio do meio
+PB_PARTS = 8.0  # altura dos componentes na protoboard embaixo das pernas
 MCU_FIT = 0.25  # folga de cada lado da placa entre as guias
 MCU_RIB = 5.0  # meia largura do apoio embaixo da placa: os pinos (a 7,62 mm do meio) ficam livres
-USB_C = (8.94, 3.26)  # largura e altura do conector, montado em cima da placa
+USB_C = (8.94, 3.2)  # largura e altura do conector, montado em cima da placa
 USB_OVERHANG = 1.0  # quanto o USB-C passa da borda da placa (meça a sua): a tampa fica com essa espessura em volta
 USB_FIT = 0.25  # folga de cada lado do USB-C no furo
 SLACK = USB_OVERHANG + 1.5  # espaço atrás da placa para ela entrar sem o USB-C bater na tampa
 GUIDE = 1.6  # espessura das guias, do apoio e da parede de trás do suporte
+
+# Protoboard de 170 furos no chão, entre dois trilhos com uma aba por cima da borda (que não tem furos). Entra
+# deslizando por trás, com a tampa aberta, e fica presa entre o rosto e a tampa; a fita dupla face vira opcional
+PB = (36.0, 48.0, 8.5)  # largura (x, com os dentinhos), comprimento (z) e altura: medidas de uma de 170 furos
+PB_GAP = 1.5  # folga dos lados, para os dentinhos de encaixe das laterais da protoboard
+PB_LIP = 1.5  # quanto a aba do trilho cobre a borda de cima
 
 # Tampa de encaixe: quatro linguetas, em cima e embaixo, com um dente que entra num rebaixo das paredes do corpo. A
 # tampa de parafusos continua valendo; o corpo serve para as duas
@@ -153,10 +161,25 @@ def corpo() -> Manifold:
     for x, y in BOSSES:  # torres dos parafusos da tampa (M2 × 8 autoatarraxante)
         shell += cyl(x, y, FACE, SHELL, 6.5)
         shell -= cyl(x, y, SHELL - 10, SHELL + 1, 1.7)
+    shell += trilhos()
     shell -= union([notch for _, notch in snaps()])  # rebaixos dos dentes da tampa de encaixe
     # fenda embaixo, no meio da borda de trás: uma moeda ou chave de fenda ali levanta a tampa
     shell -= box(CX - 6, BODY[1] * P - 1, SHELL - 1, CX + 6, IN[1] - 1, SHELL + 1)
     return shell
+
+
+def trilhos() -> Manifold:
+    """Os dois trilhos da protoboard: uma parede de cada lado e uma aba por cima da borda. Vão do rosto até a tampa,
+    então imprimem sem suporte."""
+    lip_y = IN[1] + PB[2] + 0.3  # 0,3 mm de folga entre a protoboard e a aba
+    rails = []
+    for side in (-1, 1):
+        edge = CX + side * PB[0] / 2  # lado da protoboard
+        wall = sorted((edge + side * PB_GAP, edge + side * (PB_GAP + GUIDE)))
+        lip = sorted((edge - side * PB_LIP, wall[1] if side < 0 else wall[0]))
+        rails += [box(wall[0], IN[1] - 0.01, FACE, wall[1], lip_y + GUIDE, SHELL),
+                  box(min(lip[0], wall[0]), lip_y, FACE, max(lip[1], wall[1]), lip_y + GUIDE, SHELL)]
+    return union(rails)
 
 
 def snaps() -> list[tuple[Manifold, Manifold]]:
@@ -354,8 +377,25 @@ def check_mcu() -> None:
     assert (latch ^ board).volume() < 1e-6, "a trava bate na placa"
     assert 0 < (lid ^ latch).volume() < 3, "a trava não aperta só pelas nervuras"
     assert (lid ^ latch.translate((0, 6, 0))).volume() < 1e-6, "a trava não sai por cima"
-    protoboard = box(46.5, IN[1], 2.5, 81.5, IN[1] + 8.5 + 11, SHELL)  # com até 11 mm de componentes em cima
-    assert (lid ^ protoboard).volume() < 1e-6, "o suporte da placa bate na protoboard"
+    parts = box(CX - PB[0] / 2 + 3, IN[1] + PB[2], FACE + 0.5, CX + PB[0] / 2 - 3, IN[1] + PB[2] + 11, SHELL)
+    assert (lid ^ parts).volume() < 1e-6, "o suporte da placa bate nos componentes da protoboard (11 mm)"
+    # as pernas: duas fileiras de 8, a 7,62 mm do meio, a primeira a 2,37 mm da borda de trás
+    rows = [box(CX + x - 1.27, MCU_Y - MCU_LEGS, back + 1.1, CX + x + 1.27, MCU_Y, back + 21.4) for x in (-7.62, 7.62)]
+    legs = union(rows)
+    assert (lid ^ legs).volume() < 1e-6 and (latch ^ legs).volume() < 1e-6, "as pernas batem no suporte ou na trava"
+    sweep = union([(r + r.translate((0, 25, 0))).hull().translate((0, 0, -SLACK)) for r in rows])
+    assert (lid ^ sweep).volume() < 1e-6, "as pernas não passam ao pôr a placa por cima"
+    assert MCU_Y - MCU_LEGS >= IN[1] + PB[2] + PB_PARTS, "as pernas batem nos componentes da protoboard"
+
+
+def check_protoboard() -> None:
+    """A protoboard cabe entre os trilhos, entra deslizando por trás e não bate na tampa."""
+    body, board = corpo(), box(CX - PB[0] / 2, IN[1], FACE + 0.5, CX + PB[0] / 2, IN[1] + PB[2], FACE + 0.5 + PB[1])
+    assert FACE + 0.5 + PB[1] <= SHELL, "a protoboard não cabe entre o rosto e a tampa"
+    assert (body ^ board).volume() < 1e-6, "a protoboard bate nos trilhos"
+    assert (body ^ (board + board.translate((0, 0, D))).hull()).volume() < 1e-6, "a protoboard não entra por trás"
+    assert (tampa() ^ board).volume() < 1e-6, "a protoboard bate na tampa"
+    assert PB_LIP < 3, "a aba passaria dos furos da protoboard (a borda sem furos tem uns 4 mm)"
 
 
 def flip(m: Manifold, z_top: float) -> Manifold:
@@ -392,6 +432,7 @@ if __name__ == "__main__":
     check_button()
     check_lids()
     check_mcu()
+    check_protoboard()
     diff_w = eye_flange(EYES[1])[2] - eye_flange(EYES[0])[0]
     cap = grow(eye_parts(EYES[0])["tube"], PW)
     latch_w = BTN_SIZE + 2 * (BTN_FIT - PLUG_FIT)

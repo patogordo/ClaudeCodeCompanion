@@ -10,7 +10,7 @@ Wokwi (`firmware/diagram.json`) é a versão simplificada deste circuito; as dif
 | Peça | Qtd. | Para quê |
 | --- | --- | --- |
 | Seeed Studio XIAO ESP32-C3 | 1 | O cérebro. Use a antena que vem junto: sem ela o Bluetooth fica fraco |
-| Corpo, tampa, difusores, tampinhas dos olhos e trava do botão, impressos em 3D | 1 jogo | `3d/*.stl`: 128 × 80 × 52 mm, olhos de 8 × 16 mm. Material, cores e montagem em [`impressao-3d.md`](impressao-3d.md) |
+| Corpo, tampa, difusores, tampinhas dos olhos e trava do botão, impressos em 3D | 1 jogo | `3d/*.stl`: 128 × 80 × 53 mm, olhos de 8 × 16 mm. Material, cores e montagem em [`impressao-3d.md`](impressao-3d.md) |
 | Plaquinhas de LED WS2812B (fita de 30 LEDs/m, 10 × 33 mm, um LED cada) | 4 | Duas em cada olho, deitadas, uma em cima da outra, coladas na tampinha do tubo de luz |
 | Mini protoboard de 170 furos | 1 | Cabe no chão do corpo. Para a versão final, placa perfurada soldada |
 | Adaptador SOT-23 para DIP | 2 | Para usar os MOSFETs (que são SMD) na protoboard |

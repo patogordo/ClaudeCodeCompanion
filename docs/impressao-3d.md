@@ -1,6 +1,6 @@
 # Impressão 3D
 
-O corpo é o mascote do Claude Code em pixel art, oco, com 128 × 80 × 52 mm montado (16 × 10 pixels de 8 mm). Os STL
+O corpo é o mascote do Claude Code em pixel art, oco, com 128 × 80 × 53 mm montado (16 × 10 pixels de 8 mm). Os STL
 estão em `3d/` e saem do script `3d/gerar.py`, já na posição de imprimir: **nenhuma peça precisa de suporte**.
 
 <p align="center">
@@ -26,7 +26,7 @@ na ordem de montar.
 corpo; para abrir, ponha uma moeda na fenda embaixo, no meio da borda de trás, e levante. A de parafusos fecha com 4
 parafusos M2 × 8 autoatarraxantes nas torres dos cantos, que continuam no corpo. Imprima uma das duas.
 
-O corpo tem 128 × 80 × 50 mm na mesa e cabe em qualquer impressora, até numa de 180 × 180 mm.
+O corpo tem 128 × 80 × 51 mm na mesa e cabe em qualquer impressora, até numa de 180 × 180 mm.
 
 **Tudo de uma vez:** `mesa.stl` traz as seis peças de um Companion lado a lado, com a tampa de encaixe, em 208 × 154 mm (cabe em qualquer
 Anycubic Kobra, a partir de 220 × 220 mm). No fatiador (Anycubic Slicer Next, Orca, Bambu Studio), use **Dividir →
@@ -79,14 +79,19 @@ Visto por trás, com a tampa aberta:
   os LEDs ficam a uns 5 mm do difusor.
 - **Fios dos olhos:** GPIO5 → olho que fica à esquerda de quem olha de frente; GPIO6 → o outro. Por trás, o olho do
   GPIO5 é o da direita.
-- **Mini protoboard de 170 furos:** no chão, no meio, encostada na tampa. A fita dupla face que vem embaixo dela
-  segura. Em cima dela sobram uns 11 mm até o suporte da placa.
-- **ESP32-C3 SuperMini:** deitada no suporte da tampa, com o USB-C para fora. Solde os fios nos furos por cima (por
-  baixo, só o apoio do meio encosta na placa e os pinos ficam livres). Ponha a placa por cima no fundo do suporte,
+- **Mini protoboard de 170 furos:** no chão, entre os dois trilhos. Com a tampa aberta, deslize a protoboard por
+  trás, por baixo das abas dos trilhos, até encostar no rosto; fechada, a tampa a segura do outro lado. As abas cobrem
+  só a borda sem furos, e os trilhos têm folga dos lados para os dentinhos de encaixe. A fita dupla face fica opcional.
+  Os trilhos contam com uma de 48 × 36 × 8,5 mm (a largura com os dentinhos): se a sua for diferente, mude `PB` no
+  `gerar.py`. Embaixo da SuperMini, os componentes podem ter até 8 mm de altura; no resto, até uns 17 mm.
+- **ESP32-C3 SuperMini:** deitada no suporte da tampa, com o USB-C para fora. As pernas (a barra de pinos, até
+  10 mm) descem dos lados do apoio do meio, que é o único que encosta na placa por baixo, e ficam acima dos
+  componentes da protoboard. Ponha a placa por cima no fundo do suporte,
   encostada na parede de trás, e deslize até o USB-C entrar no furo: ele fica rente à tampa por fora, e o cabo encosta
   nela. Depois empurre a trava da placa por cima, entre a placa e a parede: ela segura a placa contra a tampa e, com as
-  duas linguetas, por cima. O suporte conta com uma SuperMini de 18 × 22,52 mm com o USB-C passando 1 mm da borda;
-  meça a sua e, se for diferente, mude `MCU` e `USB_OVERHANG` no `gerar.py`.
+  duas linguetas, por cima. O suporte conta com uma SuperMini de 18 × 22,52 mm, com 4 mm da base da placa ao topo do
+  USB-C e o USB-C passando 1 mm da borda; se a sua for diferente, mude `MCU`, `MCU_PCB` e `USB_OVERHANG` no
+  `gerar.py`.
 - **Resistores e capacitor:** na protoboard.
 - **Bateria** (só com o XIAO, que carrega bateria; a SuperMini não): em pé, na parede da esquerda, atrás do tubo do
   olho (a partir de uns 15 mm do rosto), com fita dupla face de espuma. Uma 803040 (8 × 30 × 40 mm, 1000 mAh) cabe com
@@ -102,7 +107,7 @@ Visto por trás, com a tampa aberta:
 
 ## Protoboard ou placa soldada
 
-A mini protoboard de 170 furos (47 × 35 × 8,5 mm) cabe e é ótima para o protótipo, mas com o tempo os jumpers e os
+A mini protoboard de 170 furos (48 × 36 × 8,5 mm) cabe e é ótima para o protótipo, mas com o tempo os jumpers e os
 componentes soltam. Para a versão final, solde tudo numa placa perfurada do mesmo tamanho. O suporte da placa fica
 logo acima dela (`MCU_Y` no `gerar.py`).
 
@@ -115,5 +120,5 @@ Os números ficam no começo do `3d/gerar.py`: `P` (tamanho do pixel), `D` (prof
 uv run 3d/gerar.py
 ```
 
-O script confere o tamanho de cada peça antes de salvar. Com o `D` menor que 52 mm, a protoboard (47 mm) não cabe
-mais deitada no fundo.
+O script confere o tamanho de cada peça antes de salvar. Com o `D` menor que 53 mm, a protoboard (48 mm) não cabe
+mais entre o rosto e a tampa.
