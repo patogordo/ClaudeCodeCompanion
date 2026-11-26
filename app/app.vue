@@ -7,6 +7,8 @@ import {
   SERVICE_UUID,
   STATES,
   STATE_INFO,
+  SONGS,
+  musicCommand,
   STATUS_UUID,
   brightnessCommand,
   hex,
@@ -289,6 +291,22 @@ function powerOff() {
       <div class="power-off">
         <button class="danger" :disabled="!ready" @click="powerOff">Desligar o Companion</button>
         <span class="muted">Para ligar, segure o botão dele por 1 s.</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Músicas</h2>
+      <p class="muted">Os olhos piscam junto. Um toque no botão do Companion para.</p>
+      <div class="songs">
+        <button
+          v-for="(name, i) in SONGS"
+          :key="name"
+          class="ghost"
+          :disabled="!ready"
+          @click="send(musicCommand(i + 1))"
+        >
+          {{ name }}
+        </button>
       </div>
     </section>
 
@@ -623,5 +641,11 @@ footer {
 }
 footer a {
   color: inherit;
+}
+
+.songs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

@@ -2,8 +2,8 @@ mpa<p align="center"><img src="public/logo.svg" alt="" width="96"></p>
 
 <h1 align="center">Claude Code Companion</h1>
 
-<p align="center">O mascote do <strong>Claude Code</strong> na sua mesa, com olhos de LED que mostram, por Bluetooth, o
-que ele está fazendo.<br>
+<p align="center">O mascote do <strong>Claude Code</strong> na sua mesa, com olhos de LED que mostram, pelo cabo USB ou
+por Bluetooth, o que ele está fazendo.<br>
 <a href="https://patogordo.github.io/ClaudeCodeCompanion/">patogordo.github.io/ClaudeCodeCompanion</a></p>
 
 ---
@@ -39,17 +39,17 @@ com uma escala subindo; ao desligar, acendem em branco, a pálpebra fecha de cim
 ## Como funciona
 
 ```
-Claude Code ── hooks ──► companion send … ── UDP ──► ponte BLE ──┐
-                                                                 ├──► Companion (XIAO ESP32-C3)
-Portal no navegador ───────────── Web Bluetooth ─────────────────┘
+Claude Code ── hooks ──► companion send … ── UDP ──► ponte (USB ou BLE) ──┐
+                                                                          ├──► Companion (XIAO ESP32-C3)
+Portal no navegador ───────────── Web Bluetooth ──────────────────────────┘
 ```
 
 - **Firmware** (`firmware/`): Seeed XIAO ESP32-C3, dois LEDs atrás de cada olho, buzzer, botão e bateria que carrega
-  pelo USB-C. Tem dois **superpoderes**: três pinos na cabeça que continuam a corrente de LEDs (um chapéu de Natal com LEDs
-  acende junto com os olhos) e um conector Qwiic nas costas para acessórios I2C. Peças e ligações em
+  pelo USB-C. Cada olho tem o próprio fio de dados. Peças e ligações em
   [`docs/hardware.md`](docs/hardware.md).
 - **Plugin do Claude Code** (`plugin/`): hooks que mandam o estado a cada passo, sem nunca fazer o Claude esperar, e uma
-  ponte em Python (bleak) que segura a conexão BLE para todas as sessões. Tem também uma skill: peça ao Claude
+  ponte em Python que segura uma conexão só para todas as sessões: pelo cabo USB, se estiver ligado ao computador,
+  senão por Bluetooth (bleak). Tem também uma skill: peça ao Claude
   "abaixa o volume do companion" ou "quanto tem de bateria?".
 - **Portal** (`app/`): página que conecta pelo Web Bluetooth e mostra os olhos ao vivo, a bateria e os superpoderes;
   ajusta volume e brilho, testa os estados e desliga. Funciona ao mesmo tempo que o plugin.
@@ -85,8 +85,7 @@ pnpm sim:test   # liga, obedece, desliga e liga de novo (firmware/test.scenario.
 1. Com a extensão [Wokwi Simulator](https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vscode), abra a
    pasta do firmware: `code firmware`. Na primeira vez, `F1` → **Wokwi: Request a New License** (grátis, pelo
    navegador).
-2. `pnpm firmware`, depois `F1` → **Wokwi: Start Simulator**. Os olhos são os quatro NeoPixels (dois por olho), e o
-   chapéu é a fita de cima.
+2. `pnpm firmware`, depois `F1` → **Wokwi: Start Simulator**. Os olhos são os quatro NeoPixels (dois por olho).
 3. No terminal da serial, digite `thinking`, `done`, `question`, `error`, `vol 30`... O botão vermelho (ou a tecla `P`,
    com o simulador em foco) liga e desliga segurando 1 s.
 
@@ -104,8 +103,8 @@ claude plugin install companion@companion --scope local   # só neste projeto
 ```
 
 e, em `.claude/settings.local.json`, `{"env": {"COMPANION_SIM": "localhost:4000"}}`. Abra o Claude Code nesta pasta e
-peça qualquer coisa: os olhos do simulador acompanham cada passo. Se uma ponte Bluetooth já estiver rodando de outra
-sessão, pare antes (`pkill -f "companion bridge"`).
+peça qualquer coisa: os olhos do simulador acompanham cada passo. Se uma ponte já estiver rodando de outra sessão,
+pare antes (`pkill -f "companion bridge"`).
 
 ## Gravar no XIAO
 
@@ -113,6 +112,8 @@ sessão, pare antes (`pkill -f "companion bridge"`).
 pnpm firmware
 arduino-cli upload -p /dev/cu.usbmodem* --fqbn esp32:esp32:XIAO_ESP32C3 firmware
 ```
+
+A ponte pode continuar conectada pelo cabo: o XIAO reinicia ao gravar e ela reconecta sozinha.
 
 ## Ligar ao Claude Code
 
@@ -123,7 +124,8 @@ claude plugin install companion@companion
 
 Abra o Claude Code. Na primeira sessão, o plugin sobe a ponte em segundo plano (com o [uv](https://docs.astral.sh/uv/),
 que baixa o bleak sozinho; sem o uv, rode `pip install bleak`). No macOS, permita o Bluetooth para o terminal quando o
-sistema pedir. Daí em diante, ligue o Companion perto do computador e ele conecta sozinho.
+sistema pedir. O plugin vale para todas as sessões, e daí em diante o Companion conecta sozinho: pelo cabo USB, se
+estiver ligado ao computador, ou pelo Bluetooth, ligado perto dele. Ligar o cabo no meio troca para ele.
 
 Se algo não acender: `~/.cache/claude-companion/bridge.log` diz o que a ponte está vendo, e `companion status` (pelo
 Claude, com a skill) mostra se o Companion está conectado.

@@ -1,12 +1,12 @@
 {
   "name": "companion",
   "version": "1.0.0",
-  "description": "Os olhos de LED do Companion mostram, por Bluetooth, quando o Claude está pensando, terminou, tem uma dúvida ou deu erro",
+  "description": "Os olhos de LED do Companion mostram, pelo cabo USB ou por Bluetooth, quando o Claude está pensando, terminou, tem uma dúvida ou deu erro",
   "author": {
     "name": "patogordo"
   },
   "license": "MIT",
-  "keywords": ["bluetooth", "ble", "esp32", "hardware", "hooks"],
+  "keywords": ["usb", "bluetooth", "ble", "esp32", "hardware", "hooks"],
   "homepage": "https://patogordo.github.io/ClaudeCodeCompanion/",
   "repository": "https://github.com/patogordo/ClaudeCodeCompanion"
 }

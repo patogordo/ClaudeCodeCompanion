@@ -12,6 +12,7 @@ import {
   hex,
   parseStatus,
   volumeCommand,
+  SONGS,
 } from '../shared/protocol.ts'
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
@@ -80,4 +81,9 @@ test('volume e brilho saem dentro da faixa do firmware', () => {
   assert.equal(brightnessCommand(0), 'bri 5')
   assert.equal(brightnessCommand(42.6), 'bri 43')
   assert.equal(hex(60), '0x3C')
+})
+
+test('o portal lista as mesmas músicas do firmware', () => {
+  const list = read('firmware/songs.h').match(/SONG_LIST\[\] = \{([^}]*)\}/)![1]!
+  assert.equal(list.split(',').length, SONGS.length)
 })

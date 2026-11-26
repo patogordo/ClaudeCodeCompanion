@@ -10,7 +10,8 @@ branco em cada janelinha) mostram o que o Claude Code está fazendo. Três parte
 
 - **Firmware** em Arduino (`firmware/firmware.ino`), simulado no Wokwi (`firmware/diagram.json`).
 - **Plugin do Claude Code** (`plugin/`): hooks em `hooks/hooks.json` que chamam `bin/companion`, um script Python sem
-  dependência para mandar comandos e com o bleak (via `uv run --script`) para a ponte BLE. Com
+  dependência para mandar comandos e com o bleak (via `uv run --script`) para a ponte, que fala pela serial da USB
+  quando o Companion está no cabo e pelo BLE quando não está. Com
   `COMPANION_SIM=localhost:4000`, a ponte fala com o firmware no Wokwi pela serial simulada, sem Bluetooth.
 - **Portal** em Nuxt 4 como SPA (`ssr: false`), TypeScript estrito, Web Bluetooth, sem servidor (`pnpm generate`).
 
@@ -40,8 +41,8 @@ Antes de entregar: `pnpm format`, `pnpm typecheck`, `pnpm test`; se mexeu no fir
   em segundo plano e sai. O `send` só manda um datagrama UDP: não importa o bleak nem espera resposta.
 - **Repouso é LED apagado:** o difusor é que deixa o olho branco. Os olhos mudam de cor inteiros (com o difusor, LEDs
   do mesmo olho em cores diferentes viram uma cor só).
-- **LEDs numa corrente só, no D3.** Nada de LED em D6 e D7 (UART0, log do boot) nem em D8 e D9 (strapping: o C3 não
-  dá boot). Ligações novas seguem a tabela de `docs/hardware.md`.
+- **Um fio de dados por olho: GPIO5 (esquerdo) e GPIO6 (direito).** Nada de LED nos GPIO20 e 21 (UART0, log do boot)
+  nem nos GPIO8 e 9 (strapping: o C3 não dá boot). Ligações novas seguem a tabela de `docs/hardware.md`.
 - **O loop nunca bloqueia**, fora as animações de ligar e desligar. Som é a fila de `play()`/`soundTick()`, não
   `delay()`. O callback do BLE só põe o comando na fila `inbox`; quem mexe nos LEDs é o loop.
 - **O que vem do Companion passa pelo `parseStatus`** antes de ir para a tela do portal.

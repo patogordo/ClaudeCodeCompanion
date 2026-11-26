@@ -3,19 +3,21 @@
 # requires-python = ">=3.10"
 # dependencies = ["bleak>=0.22"]
 # ///
-"""Ponte entre o Claude Code e o Companion, por Bluetooth (BLE).
+"""Ponte entre o Claude Code e o Companion, pelo cabo USB (se estiver ligado) ou por Bluetooth (BLE).
 
     companion send <comando>   manda um comando (os hooks usam este); nunca espera nem falha
     companion status           pergunta o status ao Companion (JSON)
     companion start            sobe a ponte em segundo plano, se ainda não estiver rodando
-    companion bridge           a ponte em si: mantém a conexão BLE e repassa o que chega por UDP
+    companion bridge           a ponte em si: mantém a conexão (USB ou BLE) e repassa o que chega por UDP
 
 Os hooks rodam a cada passo do Claude, então o `send` só manda um datagrama UDP para a ponte local, que segura uma
-conexão BLE só (conectar a cada evento levaria segundos). Com COMPANION_SIM=localhost:4000, a ponte fala com o
+conexão só (conectar a cada evento levaria segundos). Com o Companion no cabo, a ponte usa a serial da USB; sem cabo,
+o Bluetooth, e troca para o cabo assim que ele é ligado. Com COMPANION_SIM=localhost:4000, a ponte fala com o
 firmware rodando no Wokwi em vez do Bluetooth. Comandos em docs/protocolo.md.
 """
 
 import asyncio
+import glob
 import json
 import os
 import re
@@ -169,35 +171,77 @@ async def bridge() -> None:
         finally:
             writer.close()
 
-    async def connect_ble() -> None:
+    async def connect_ble(usb_waiting) -> None:
+        """Uma tentativa pelo Bluetooth; larga a conexão quando o Companion aparece na USB."""
         from bleak import BleakClient, BleakScanner
 
-        while True:
-            try:
-                device = await BleakScanner.find_device_by_filter(
-                    lambda d, ad: SERVICE_UUID in [u.lower() for u in ad.service_uuids], timeout=10
-                )
-                if device:
-                    gone = asyncio.Event()
-                    async with BleakClient(device, disconnected_callback=lambda _: gone.set()) as client:
+        try:
+            device = await BleakScanner.find_device_by_filter(
+                lambda d, ad: SERVICE_UUID in [u.lower() for u in ad.service_uuids], timeout=10
+            )
+            if device:
+                async with BleakClient(device) as client:
 
-                        async def write(command: str) -> None:
-                            await client.write_gatt_char(COMMAND_UUID, command.encode(), response=True)
+                    async def write(command: str) -> None:
+                        await client.write_gatt_char(COMMAND_UUID, command.encode(), response=True)
 
-                        async def read_status() -> bytes:
-                            return bytes(await client.read_gatt_char(STATUS_UUID))
+                    async def read_status() -> bytes:
+                        return bytes(await client.read_gatt_char(STATUS_UUID))
 
-                        log("conectado a", device.name or device.address)
-                        link.update(write=write, read_status=read_status)
-                        if link["state"]:
-                            await write(link["state"])
-                        await gone.wait()
-                    log("desconectado")
-            except Exception as e:  # Bluetooth desligado, sem permissão, ou o Companion sumiu no meio
-                log("bluetooth:", repr(e))
-                await asyncio.sleep(5)
-            finally:
-                link.update(write=None, read_status=None)
+                    log("conectado a", device.name or device.address)
+                    link.update(write=write, read_status=read_status)
+                    if link["state"]:
+                        await write(link["state"])
+                    while client.is_connected and not usb_waiting():
+                        await asyncio.sleep(1)
+                log("bluetooth desconectado")
+        except Exception as e:  # Bluetooth desligado, sem permissão, ou o Companion sumiu no meio
+            log("bluetooth:", repr(e))
+            await asyncio.sleep(5)
+        finally:
+            link.update(write=None, read_status=None)
+
+    async def serial(reader: asyncio.StreamReader, write, name: str, probe: bool = False) -> bool:
+        """Conversa pela serial (USB ou simulador) até ela cair. Com probe, antes confere que quem responde é o
+        Companion e devolve False se não for (outra placa na USB)."""
+        # o firmware imprime o status a cada mudança: a ponte guarda o último e responde na hora, sem depender da
+        # velocidade do simulador (que fica lento com o VS Code em segundo plano)
+        latest = {"status": None}
+        arrived = asyncio.Event()
+
+        async def read_lines() -> None:
+            async for raw in reader:  # a serial é texto; o que não é status (log, boot) é descartado
+                line = raw.decode(errors="ignore")
+                if '{"fw"' in line:
+                    latest["status"] = line[line.index('{"fw"') :].strip().encode()
+                    arrived.set()
+                elif "desligando" in line:  # desligou pelo botão: sem status até ligar de novo
+                    latest["status"] = None
+
+        async def read_status() -> bytes:
+            if not latest["status"]:  # acabou de conectar: pergunta uma vez
+                arrived.clear()
+                await write("status")
+                await asyncio.wait_for(arrived.wait(), 3)
+            return latest["status"]
+
+        lines = asyncio.create_task(read_lines())
+        try:
+            if probe:
+                try:
+                    await read_status()
+                except asyncio.TimeoutError:
+                    return False
+            log("conectado a", name)
+            link.update(write=write, read_status=read_status)
+            if link["state"]:
+                await write(link["state"])
+            await lines
+            log(name, "desconectado")
+            return True
+        finally:
+            lines.cancel()
+            link.update(write=None, read_status=None)
 
     # O firmware rodando no Wokwi: a serial simulada vira uma porta TCP (rfc2217ServerPort no wokwi.toml)
     async def connect_sim(target: str) -> None:
@@ -205,44 +249,67 @@ async def bridge() -> None:
         while True:
             try:
                 reader, writer = await asyncio.open_connection(host or "localhost", int(port))
-                # o firmware imprime o status a cada mudança: a ponte guarda o último e responde na hora, sem
-                # depender da velocidade do simulador (que fica lento com o VS Code em segundo plano)
-                latest = {"status": None}
-                arrived = asyncio.Event()
 
                 async def write(command: str) -> None:
                     writer.write(command.encode() + b"\n")
                     await writer.drain()
 
-                async def read_status() -> bytes:
-                    if not latest["status"]:  # acabou de conectar: pergunta uma vez
-                        arrived.clear()
-                        await write("status")
-                        await asyncio.wait_for(arrived.wait(), 3)
-                    return latest["status"]
-
-                log("conectado ao simulador em", target)
-                link.update(write=write, read_status=read_status)
-                if link["state"]:
-                    await write(link["state"])
-                async for raw in reader:  # a serial é texto; o que não é status (log, boot) é descartado
-                    line = raw.decode(errors="ignore")
-                    if '{"fw"' in line:
-                        latest["status"] = line[line.index('{"fw"') :].strip().encode()
-                        arrived.set()
-                    elif "desligando" in line:  # desligou pelo botão: sem status até ligar de novo
-                        latest["status"] = None
-                log("simulador desconectado")
+                await serial(reader, write, f"simulador em {target}")
+                writer.close()
             except Exception as e:  # simulador parado ou reiniciando
                 log("simulador:", repr(e))
-            finally:
-                link.update(write=None, read_status=None)
             await asyncio.sleep(2)
+
+    async def connect_usb(path: str) -> bool:
+        import tty
+
+        fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+        transport = None
+        try:
+            tty.setraw(fd)  # USB CDC: a velocidade não importa, só tirar eco e edição de linha
+            reader = asyncio.StreamReader()
+            pipe = os.fdopen(fd, "rb", buffering=0, closefd=False)
+            transport, _ = await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), pipe)
+
+            async def write(command: str) -> None:
+                os.write(fd, command.encode() + b"\n")
+
+            return await serial(reader, write, f"USB {path}", probe=True)
+        finally:
+            if transport:
+                transport.close()
+            os.close(fd)
+
+    # Cabo primeiro: com o Companion na USB a ponte fala por ela; sem cabo, pelo Bluetooth
+    async def connect_auto() -> None:
+        others: set[str] = set()  # portas USB que não são o Companion, até serem desligadas
+
+        def usb_waiting() -> bool:
+            return any(p not in others for p in usb_ports())
+
+        while True:
+            ports = usb_ports()
+            others.intersection_update(ports)
+            port = next((p for p in ports if p not in others), None)
+            if not port:
+                await connect_ble(usb_waiting)
+                continue
+            try:
+                if not await connect_usb(port):
+                    others.add(port)
+            except Exception as e:  # cabo puxado no meio, ou a porta ocupada por outro programa
+                log("usb:", repr(e))
+            await asyncio.sleep(1)
 
     server = await asyncio.start_server(http, HOST, PORT)  # TCP, na mesma porta do UDP
     log(f"ponte ouvindo em {HOST}:{PORT} (UDP e HTTP)" + (f", simulador em {SIM}" if SIM else ""))
     async with server:
-        await asyncio.gather(forward(), connect_sim(SIM) if SIM else connect_ble())
+        await asyncio.gather(forward(), connect_sim(SIM) if SIM else connect_auto())
+
+
+def usb_ports() -> list[str]:
+    # o XIAO ESP32-C3 aparece como usbmodem no macOS e ttyACM no Linux; o probe confere se é mesmo o Companion
+    return sorted(glob.glob("/dev/cu.usbmodem*") + glob.glob("/dev/ttyACM*"))
 
 
 def main(argv: list[str]) -> int:

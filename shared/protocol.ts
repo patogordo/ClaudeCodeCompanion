@@ -60,4 +60,33 @@ export function parseStatus(text: string): Status | null {
 const clamp = (v: number, min: number, max: number) => Math.round(Math.min(max, Math.max(min, v)))
 export const volumeCommand = (v: number) => `vol ${clamp(v, 0, 100)}`
 export const brightnessCommand = (v: number) => `bri ${clamp(v, 5, 100)}`
+// Mesma ordem de SONG_LIST em firmware/songs.h (há teste).
+export const SONGS = [
+  'Korobeiniki',
+  'Ode à Alegria',
+  'Für Elise',
+  'Parabéns a Você',
+  'Brilha, Brilha Estrelinha',
+  'Jingle Bells',
+  'Frère Jacques',
+  'Pequena Serenata Noturna',
+  'Quinta Sinfonia',
+  'When the Saints',
+  'Marcha Nupcial',
+  'We are Charlie Kirk',
+  "Zelda's Lullaby",
+  "Epona's Song",
+  "Saria's Song",
+  "Sun's Song",
+  'Song of Time',
+  'Song of Storms',
+  'Minuet of Forest',
+  'Bolero of Fire',
+  'Serenade of Water',
+  'Nocturne of Shadow',
+  'Requiem of Spirit',
+  'Prelude of Light',
+]
+export const musicCommand = (n: number) => `music ${n}`
+
 export const hex = (address: number) => '0x' + address.toString(16).toUpperCase().padStart(2, '0')

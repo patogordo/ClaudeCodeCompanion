@@ -36,6 +36,7 @@ batem e que os hooks só mandam comandos que existem.
 | `error` | Erro: vermelho, com dois bipes descendo |
 | `vol N` | Volume de 0 a 100 (0 é mudo). Bipa para conferir e fica guardado na flash |
 | `bri N` | Brilho de 5 a 100. Fica guardado na flash |
+| `music N` | Toca a música N (1 a 24, a ordem de `SONGS` em `shared/protocol.ts`) com os olhos piscando; um toque no botão para |
 | `off` | Desliga (deep sleep). Para ligar, segure o botão por 1 s |
 | `status` | Só na serial: imprime o status (no BLE, leia a característica de status) |
 
@@ -77,10 +78,15 @@ aparece no meio do trabalho e volta ao laranja no passo seguinte.
 
 ## Ponte do plugin
 
-`plugin/bin/companion bridge` segura uma conexão BLE só, para todas as sessões do Claude na máquina, e ouve comandos
+`plugin/bin/companion bridge` segura uma conexão só, para todas as sessões do Claude na máquina, e ouve comandos
 por UDP em `127.0.0.1:47321` (mude com `COMPANION_PORT`). Cada datagrama é um comando. Para `status`, a ponte responde
 ao remetente com o JSON do Companion, ou `{"connected":false}` se ele não estiver conectado. Quando a conexão volta, a
 ponte reenvia o último estado. O log fica em `~/.cache/claude-companion/bridge.log`.
+
+A conexão é pela serial da USB quando o Companion está no cabo, senão pelo BLE. A ponte procura `/dev/cu.usbmodem*`
+(macOS) e `/dev/ttyACM*` (Linux), manda `status` e só fica com a porta se a resposta for o JSON do Companion; outra
+placa recebe esse `status` uma vez e é deixada em paz até ser desligada. Conectada pelo BLE, a ponte troca para o cabo
+assim que ele aparece; sem o cabo, volta ao BLE.
 
 A ponte também atende HTTP na mesma porta (TCP), para o portal, que não fala UDP: `GET /status` devolve o JSON e
 `POST /send`, com o comando no corpo, manda o comando. Só o portal local (`http://localhost:*`) e o publicado
