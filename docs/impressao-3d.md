@@ -80,8 +80,9 @@ Visto por trás, com a tampa aberta:
 - **Fios dos olhos:** GPIO5 → olho que fica à esquerda de quem olha de frente; GPIO6 → o outro. Por trás, o olho do
   GPIO5 é o da direita.
 - **Mini protoboard de 170 furos:** no chão, entre os dois trilhos. Com a tampa aberta, deslize a protoboard por
-  trás, por baixo das abas dos trilhos, até encostar no rosto; fechada, a tampa a segura do outro lado. As abas cobrem
-  só a borda sem furos, e os trilhos têm folga dos lados para os dentinhos de encaixe. A fita dupla face fica opcional.
+  trás, por baixo das abas dos trilhos, até encostar no rosto; fechada, a tampa a segura do outro lado. Os trilhos têm a
+  largura da protoboard com os dentinhos de encaixe, com 0,3 mm de folga, e as abas cobrem 2,5 mm da borda sem furos:
+  mesmo encostada num trilho, ela não sai de baixo da aba do outro. A fita dupla face fica opcional.
   Os trilhos contam com uma de 48 × 36 × 8,5 mm (a largura com os dentinhos): se a sua for diferente, mude `PB` no
   `gerar.py`. Embaixo da SuperMini, os componentes podem ter até 8 mm de altura; no resto, até uns 17 mm.
 - **ESP32-C3 SuperMini:** deitada no suporte da tampa, com o USB-C para fora. As pernas (a barra de pinos, até

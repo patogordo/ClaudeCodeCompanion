@@ -66,8 +66,9 @@ GUIDE = 1.6  # espessura das guias, do apoio e da parede de trás do suporte
 # Protoboard de 170 furos no chão, entre dois trilhos com uma aba por cima da borda (que não tem furos). Entra
 # deslizando por trás, com a tampa aberta, e fica presa entre o rosto e a tampa; a fita dupla face vira opcional
 PB = (36.0, 48.0, 8.5)  # largura (x, com os dentinhos), comprimento (z) e altura: medidas de uma de 170 furos
-PB_GAP = 1.5  # folga dos lados, para os dentinhos de encaixe das laterais da protoboard
-PB_LIP = 1.5  # quanto a aba do trilho cobre a borda de cima
+PB_GAP = 0.3  # folga de cada lado: a largura já conta os dentinhos, então o trilho fica justo
+PB_TOOTH = 1.0  # quanto o dentinho sai da lateral (36 mm com ele, 35 sem)
+PB_LIP = 2.5  # quanto a aba do trilho cobre a borda de cima (a borda sem furos tem uns 4 mm)
 
 # Tampa de encaixe: quatro linguetas, em cima e embaixo, com um dente que entra num rebaixo das paredes do corpo. A
 # tampa de parafusos continua valendo; o corpo serve para as duas
@@ -395,7 +396,9 @@ def check_protoboard() -> None:
     assert (body ^ board).volume() < 1e-6, "a protoboard bate nos trilhos"
     assert (body ^ (board + board.translate((0, 0, D))).hull()).volume() < 1e-6, "a protoboard não entra por trás"
     assert (tampa() ^ board).volume() < 1e-6, "a protoboard bate na tampa"
-    assert PB_LIP < 3, "a aba passaria dos furos da protoboard (a borda sem furos tem uns 4 mm)"
+    assert PB_LIP < 3.5, "a aba passaria dos furos da protoboard (a borda sem furos tem uns 4 mm)"
+    # do lado sem dentinho, mesmo com a protoboard encostada no outro trilho, a aba ainda cobre 1 mm da borda
+    assert PB_LIP - PB_TOOTH - PB_GAP >= 1, "a protoboard pode escorregar de lado e soltar de uma aba"
 
 
 def flip(m: Manifold, z_top: float) -> Manifold:
