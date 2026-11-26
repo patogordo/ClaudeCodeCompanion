@@ -101,8 +101,10 @@ Visto por trás, com a tampa aberta:
 - **Buzzer:** colado na tampa, atrás dos furos do som (embaixo, à direita).
 - **Botão:** uma chave táctil de 12 × 12 mm, só a chave, sem a plaquinha do módulo. Solde os fios em duas pernas
   em diagonal (assim pega os dois contatos, qualquer que seja o lado) e encaixe a chave por dentro da tampa, no
-  berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até encostar: as
-  nervuras seguram sem cola, e os entalhes deixam passar as pernas. Ponha a capa por fora, pelo furo. O furo conta com
+  berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até estalar: as
+  nervuras a deixam justa, e os dois dentes entram nas janelas das paredes do berço, então apertar o botão (mesmo um
+  duro) empurra a trava contra a parede, não para fora. Os entalhes deixam passar as pernas. Para tirar, aperte os
+  dentes pelas janelas com uma chave de fenda pequena. Ponha a capa por fora, pelo furo. O furo conta com
   uma capa redonda de 13 mm; se a sua for de outro tamanho, meça e mude o `CAP_D` no `gerar.py`.
 - **Tampa:** a de encaixe estala no lugar; a de parafusos leva 4 parafusos M2 × 8 autoatarraxantes.
 

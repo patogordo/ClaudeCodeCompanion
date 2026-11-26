@@ -46,7 +46,8 @@ BTN_FIT = 0.2  # folga de cada lado da chave no berço
 CAP_D = 13.0  # diâmetro da capa (meça a sua): o furo tem 0,4 mm de folga de cada lado, para a capa não raspar
 LEGS_SLOT = 7.2  # rasgo das pernas (5 mm entre elas) nas duas paredes da esquerda e da direita do berço
 LATCH = 3.0  # espessura da trava
-CRADLE = BTN_BODY + LATCH + 1.0  # altura do berço: a trava entra até encostar na chave, seja qual for a altura dela
+CRADLE = BTN_BODY + LATCH + 3.0  # altura do berço: a parede passa 3 mm da trava, para a borda da janela ser forte
+BARB = 0.5  # dente de cada lado da trava: estala na janela da parede, e o aperto do botão vai direto para ela
 
 # Placa: ESP32-C3 SuperMini, deitada num suporte na tampa, com o USB-C rente à tampa por fora. A placa entra por cima
 # no fundo do suporte e desliza até o USB-C entrar no furo; a trava da placa ocupa a folga que sobra atrás
@@ -239,6 +240,9 @@ def tampa(encaixe: bool = True) -> Manifold:
     cradle = rbox(grow(inner, PW), SHELL - CRADLE, SHELL) - rbox(inner, SHELL - CRADLE - 1, SHELL + 1)
     legs = (inner[0] - PW - 1, BTN[1] - LEGS_SLOT / 2, inner[2] + PW + 1, BTN[1] + LEGS_SLOT / 2)
     cradle -= rbox(legs, SHELL - CRADLE - 1, SHELL + 1)
+    # janelas dos dentes da trava, nas duas paredes inteiras; a borda de baixo fica 0,4 mm além do dente
+    catch = SHELL - BTN_BODY - LATCH - 0.4
+    cradle -= box(BTN[0] - 2.6, inner[1] - PW - 1, catch, BTN[0] + 2.6, inner[3] + PW + 1, catch + 2.2)
     lid = plate - union(holes) + cradle + suporte_da_placa()
     return lid + union([tab for tab, _ in snaps()]) if encaixe else lid
 
@@ -270,8 +274,9 @@ def trava_da_placa() -> Manifold:
 
 
 def trava_do_botao() -> Manifold:
-    """Entra no berço por trás até encostar na chave e a segura contra a tampa, com nervuras que apertam sem cola. Os
-    entalhes das pontas deixam passar as pernas, já com os fios soldados."""
+    """Entra no berço por trás até encostar na chave e a segura contra a tampa: as nervuras a deixam justa e os dois
+    dentes estalam nas janelas das paredes, então apertar o botão não a empurra para fora. Os entalhes das pontas
+    deixam passar as pernas, já com os fios soldados."""
     bx, by = BTN
     x0, y0, x1, y1 = grow((bx, by, bx, by), BTN_SIZE / 2 + BTN_FIT - PLUG_FIT)
     z0, z1 = SHELL - BTN_BODY - LATCH, SHELL - BTN_BODY  # z1 encosta na chave
@@ -279,7 +284,13 @@ def trava_do_botao() -> Manifold:
     for nx0, nx1 in ((x0 - 1, bx - 5.2), (bx + 5.2, x1 + 1)):  # as pernas saem a 6,25 mm do centro
         latch -= box(nx0, by - LEGS_SLOT / 2, z0 - 1, nx1, by + LEGS_SLOT / 2, z1 + 1)
     ribs = [(bx + dx, y) for dx in (-3.5, 3.5) for y in (y0 - RIB + 0.5, y1 + RIB - 0.5)]
-    return latch + union([cyl(x, y, z0, z1 - 0.6, 1.0) for x, y in ribs])  # a ponta sem nervura entra alinhada
+    latch += union([cyl(x, y, z0, z1 - 0.6, 1.0) for x, y in ribs])  # a ponta sem nervura entra alinhada
+    # dentes: face reta para fora (é a que segura) e rampa para dentro, para entrar empurrando
+    for face, out in ((y1, 1), (y0, -1)):
+        tooth = [(z0, face - out * 0.2), (z0, face + out * BARB), (z0 + 0.3, face + out * BARB), (z0 + 1.3, face),
+                 (z0 + 1.3, face - out * 0.2)]
+        latch += prism(tooth, bx - 2.2, bx + 2.2)
+    return latch
 
 
 def difusores() -> Manifold:
@@ -352,6 +363,7 @@ def check_button() -> None:
         assert (lid ^ part).volume() < 1e-6, f"{name} bate na tampa"
     assert (latch ^ (switch + legs)).volume() < 1e-6, "a trava bate na chave"
     assert 0 < (lid ^ latch).volume() < 3, "a trava não aperta só pelas nervuras"
+    assert (lid ^ latch.translate((0, 0, -0.6))).volume() > 0.05, "os dentes da trava não seguram na janela"
     assert (corpo() ^ lid).volume() < 1e-6, "o berço do botão bate no corpo"
 
 
@@ -452,7 +464,7 @@ if __name__ == "__main__":
         "tampas-dos-olhos.stl": (flip(tampas_dos_olhos(), TUBE_END + PW), (cap_w, cap_h, TUBE_END + PW - LED_Z)),
         "trava-do-botao.stl": (
             trava_do_botao().translate((0, 0, LATCH + BTN_BODY - SHELL)),
-            (latch_w, latch_w + 2 * RIB, LATCH),
+            (latch_w, latch_w + 2 * max(RIB, BARB), LATCH),
         ),
         # deitada, com as linguetas para cima
         "trava-da-placa.stl": (trava_da_placa().translate((0, 0, -mcu_z()[2])), (mcu_latch_w, 4.8, SLACK + 1)),
