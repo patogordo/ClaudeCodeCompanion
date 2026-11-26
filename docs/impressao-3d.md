@@ -13,13 +13,14 @@ estão em `3d/` e saem do script `3d/gerar.py`, já na posição de imprimir: **
 | Arquivo | Cor | Na mesa |
 | --- | --- | --- |
 | `corpo.stl` | Laranja | Com o rosto para baixo. O rosto pega a textura da mesa (numa PEI texturizada fica fosco e bonito) |
-| `tampa.stl` | Laranja | Com o lado de fora para baixo |
+| `tampa.stl` | Laranja | Com o lado de fora para baixo (o berço do botão fica em cima) |
 | `difusores.stl` (os 2 olhos, ocos) | Branco | Com a aba para baixo |
 | `tampas-dos-olhos.stl` (as 2) | Qualquer; branco reflete mais luz | Com a aba para baixo (o rebaixo dos LEDs fica em cima) |
+| `trava-do-botao.stl` | Qualquer | Deitada |
 
 O corpo tem 128 × 80 × 50 mm na mesa e cabe em qualquer impressora, até numa de 180 × 180 mm.
 
-**Tudo de uma vez:** `mesa.stl` traz as quatro peças de um Companion lado a lado, em 208 × 154 mm (cabe em qualquer
+**Tudo de uma vez:** `mesa.stl` traz as cinco peças de um Companion lado a lado, em 208 × 154 mm (cabe em qualquer
 Anycubic Kobra, a partir de 220 × 220 mm). No fatiador (Anycubic Slicer Next, Orca, Bambu Studio), use **Dividir →
 Para objetos** para separar as peças. Com multicor (o ACE da Anycubic), dê o branco aos difusores. Sem multicor,
 imprima os difusores à parte, em branco, ou só a `mesa.stl` sem eles. Para 3 Companions, são 3 impressões: três corpos
@@ -79,7 +80,11 @@ Visto por trás, com a tampa aberta:
   face de espuma. Uma 803040 (8 × 30 × 40 mm, 1000 mAh) cabe com os 40 mm na vertical, entre a torre de baixo e a de
   cima.
 - **Buzzer:** colado na tampa, atrás dos furos do som (embaixo, à direita).
-- **Botão:** de pulso, de painel, de 7 mm, na tampa em cima à esquerda, com a porca por dentro.
+- **Botão:** uma chave táctil de 12 × 12 mm, só a chave, sem a plaquinha do módulo. Solde os fios em duas pernas
+  em diagonal (assim pega os dois contatos, qualquer que seja o lado) e encaixe a chave por dentro da tampa, no
+  berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até encostar: as
+  nervuras seguram sem cola, e os entalhes deixam passar as pernas. Ponha a capa por fora, pelo furo. O furo conta com
+  uma capa redonda de 13 mm; se a sua for de outro tamanho, meça e mude o `CAP_D` no `gerar.py`.
 - **Rasgos dos superpoderes** (topo e tampa): ficam vazios por enquanto.
 - **Tampa:** 4 parafusos M2 × 8 autoatarraxantes nas torres dos cantos.
 

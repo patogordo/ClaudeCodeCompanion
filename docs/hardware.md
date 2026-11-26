@@ -10,14 +10,14 @@ Wokwi (`firmware/diagram.json`) é a versão simplificada deste circuito; as dif
 | Peça | Qtd. | Para quê |
 | --- | --- | --- |
 | Seeed Studio XIAO ESP32-C3 | 1 | O cérebro. Use a antena que vem junto: sem ela o Bluetooth fica fraco |
-| Corpo, tampa, difusores e tampinhas dos olhos, impressos em 3D | 1 jogo | `3d/*.stl`: 128 × 80 × 52 mm, olhos de 8 × 16 mm. Material, cores e montagem em [`impressao-3d.md`](impressao-3d.md) |
+| Corpo, tampa, difusores, tampinhas dos olhos e trava do botão, impressos em 3D | 1 jogo | `3d/*.stl`: 128 × 80 × 52 mm, olhos de 8 × 16 mm. Material, cores e montagem em [`impressao-3d.md`](impressao-3d.md) |
 | Plaquinhas de LED WS2812B (fita de 30 LEDs/m, 10 × 33 mm, um LED cada) | 4 | Duas em cada olho, deitadas, uma em cima da outra, coladas na tampinha do tubo de luz |
 | Mini protoboard de 170 furos | 1 | Cabe no chão do corpo. Para a versão final, placa perfurada soldada |
 | Adaptador SOT-23 para DIP | 2 | Para usar os MOSFETs (que são SMD) na protoboard |
 | Parafuso M2 × 8 autoatarraxante | 4 | Fecham a tampa |
 | Bateria LiPo 1S 3,7 V, 500 a 1000 mAh, com proteção | 1 | Soldada nos pads BAT+ e BAT− embaixo do XIAO, que carrega pelo USB-C |
 | Buzzer piezo passivo de 12 mm | 1 | Os sons. Piezo puxa pouca corrente e vai direto no pino; buzzer magnético precisa de transistor |
-| Botão de pulso de painel, 7 mm | 1 | Liga e desliga, na tampa de trás |
+| Chave táctil de 12 × 12 × 7,3 mm (4 pernas), com capa redonda de 13 mm | 1 | Liga e desliga. Fica num berço por dentro da tampa de trás, com a capa para fora; só a chave, sem a plaquinha do módulo |
 | MOSFET P AO3401 e MOSFET N 2N7002 | 1 + 1 | Cortam a alimentação dos LEDs com o Companion desligado |
 | Resistor 220 kΩ | 2 | Divisor para medir a bateria |
 | Resistor 100 kΩ | 2 | Pull-up do gate do AO3401 e pull-down do gate do 2N7002 |

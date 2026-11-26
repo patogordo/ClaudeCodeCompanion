@@ -37,6 +37,17 @@ RIB = 0.3  # quanto cada nervura sai da tampinha
 LED_Z = 9.0  # frente da tampinha, onde as plaquinhas colam: os LEDs ficam a uns 5 mm do difusor
 TUBE_END = 13.0  # o tubo vai do rosto até aqui; a aba da tampinha encosta na ponta dele
 
+# Botão: chave táctil de 12 × 12 × 7,3 mm (4 pernas) com capa redonda. A chave fica num berço por dentro da tampa,
+# encostada nela e presa por trás pela trava; a capa passa pelo furo e fica para fora
+BTN = (36.0, 64.0)  # centro, visto por trás (em cima, à esquerda)
+BTN_SIZE = 12.0
+BTN_BODY = 3.5  # da base da chave até a chapa de metal
+BTN_FIT = 0.2  # folga de cada lado da chave no berço
+CAP_D = 13.0  # diâmetro da capa (meça a sua): o furo tem 0,4 mm de folga de cada lado, para a capa não raspar
+LEGS_SLOT = 7.2  # rasgo das pernas (5 mm entre elas) nas duas paredes da esquerda e da direita do berço
+LATCH = 3.0  # espessura da trava
+CRADLE = BTN_BODY + LATCH + 1.0  # altura do berço: a trava entra até encostar na chave, seja qual for a altura dela
+
 # O mascote em pixels: (coluna, linha) a partir do canto de baixo à esquerda (ele é simétrico)
 BODY = (2, 2, 14, 10)
 ARMS = [(0, 4, 2, 6), (14, 4, 16, 6)]
@@ -130,7 +141,7 @@ def tampa() -> Manifold:
         box(CX - 7 + 4.5, USB_Y - 4.5, SHELL - 1, CX + 7 - 4.5, USB_Y + 4.5, D + 1),
         cyl(CX - 7 + 4.5, USB_Y, SHELL - 1, D + 1, 9),
         cyl(CX + 7 - 4.5, USB_Y, SHELL - 1, D + 1, 9),
-        cyl(36, 64, SHELL - 1, D + 1, 7.2),  # botão de painel de 7 mm (liga e desliga)
+        cyl(*BTN, SHELL - 1, D + 1, CAP_D + 0.8),  # a capa do botão (liga e desliga) passa por aqui
         box(92 - 4, 64 - 2.5, SHELL - 1, 92 + 4, 64 + 2.5, D + 1),  # superpoder das costas: conector Qwiic
     ]
     holes += [  # furos do som, na frente do buzzer
@@ -138,7 +149,25 @@ def tampa() -> Manifold:
     ] + [cyl(96, 30, SHELL - 1, D + 1, 1.6)]
     for x, y in BOSSES:  # parafusos escareados
         holes += [cyl(x, y, SHELL - 1, D + 1, 2.3), cyl(x, y, D - 1.1, D + 0.01, 2.2, 4.4)]
-    return plate - union(holes)
+    # berço do botão: a chave encosta na tampa por dentro, e a trava entra por trás e a segura
+    inner = grow((*BTN, *BTN), BTN_SIZE / 2 + BTN_FIT)
+    cradle = rbox(grow(inner, PW), SHELL - CRADLE, SHELL) - rbox(inner, SHELL - CRADLE - 1, SHELL + 1)
+    legs = (inner[0] - PW - 1, BTN[1] - LEGS_SLOT / 2, inner[2] + PW + 1, BTN[1] + LEGS_SLOT / 2)
+    cradle -= rbox(legs, SHELL - CRADLE - 1, SHELL + 1)
+    return plate - union(holes) + cradle
+
+
+def trava_do_botao() -> Manifold:
+    """Entra no berço por trás até encostar na chave e a segura contra a tampa, com nervuras que apertam sem cola. Os
+    entalhes das pontas deixam passar as pernas, já com os fios soldados."""
+    bx, by = BTN
+    x0, y0, x1, y1 = grow((bx, by, bx, by), BTN_SIZE / 2 + BTN_FIT - PLUG_FIT)
+    z0, z1 = SHELL - BTN_BODY - LATCH, SHELL - BTN_BODY  # z1 encosta na chave
+    latch = box(x0, y0, z0, x1, y1, z1)
+    for nx0, nx1 in ((x0 - 1, bx - 5.2), (bx + 5.2, x1 + 1)):  # as pernas saem a 6,25 mm do centro
+        latch -= box(nx0, by - LEGS_SLOT / 2, z0 - 1, nx1, by + LEGS_SLOT / 2, z1 + 1)
+    ribs = [(bx + dx, y) for dx in (-3.5, 3.5) for y in (y0 - RIB + 0.5, y1 + RIB - 0.5)]
+    return latch + union([cyl(x, y, z0, z1 - 0.6, 1.0) for x, y in ribs])  # a ponta sem nervura entra alinhada
 
 
 def difusores() -> Manifold:
@@ -196,6 +225,24 @@ def check_eyes() -> None:
     assert (body ^ tampas_dos_olhos()).volume() < 5, "tampinha do olho bate no corpo"
 
 
+def check_button() -> None:
+    """Confere o botão montado: a chave e as pernas cabem no berço, a capa passa livre pelo furo e a trava só aperta
+    pelas nervuras."""
+    bx, by = BTN
+    s = BTN_SIZE / 2
+    switch = box(bx - s, by - s, SHELL - BTN_BODY, bx + s, by + s, SHELL)
+    base = SHELL - BTN_BODY
+    legs = union([box(bx + x - 0.4, by + y - 0.4, base - 3.5, bx + x + 0.4, by + y + 0.4, base + 0.5)
+                  for x in (-6.25, 6.25) for y in (-2.5, 2.5)])  # 12,5 × 5 mm entre as pernas
+    cap = cyl(bx, by, SHELL + 0.3, D + 6, CAP_D)  # a borda da capa fica um pouco acima da chapa da chave
+    lid, latch = tampa(), trava_do_botao()
+    for name, part in [("a chave", switch), ("as pernas", legs), ("a capa", cap)]:
+        assert (lid ^ part).volume() < 1e-6, f"{name} bate na tampa"
+    assert (latch ^ (switch + legs)).volume() < 1e-6, "a trava bate na chave"
+    assert 0 < (lid ^ latch).volume() < 3, "a trava não aperta só pelas nervuras"
+    assert (corpo() ^ lid).volume() < 1e-6, "o berço do botão bate no corpo"
+
+
 def flip(m: Manifold, z_top: float) -> Manifold:
     """Vira a peça de cabeça para baixo (gira 180° em y) mantendo o lugar em x: o que era z_top encosta na mesa."""
     return m.rotate((0, 180, 0)).translate((16 * P, 0, z_top))
@@ -227,22 +274,29 @@ def at(m: Manifold, x: float, y: float) -> Manifold:
 
 if __name__ == "__main__":
     check_eyes()
+    check_button()
     diff_w = eye_flange(EYES[1])[2] - eye_flange(EYES[0])[0]
     cap = grow(eye_parts(EYES[0])["tube"], PW)
+    latch_w = BTN_SIZE + 2 * (BTN_FIT - PLUG_FIT)
     cap_w, cap_h = 2 * CX - 2 * (eye_parts(EYES[0])["plug"][0] - RIB), cap[3] - cap[1]  # com as nervuras das pontas
     parts = {
         "corpo.stl": (corpo(), (16 * P, 10 * P, SHELL)),
-        "tampa.stl": (flip(tampa(), D), (12 * P, 8 * P, LID)),
+        "tampa.stl": (flip(tampa(), D), (12 * P, 8 * P, LID + CRADLE)),  # o berço do botão fica para cima
         "difusores.stl": (flip(difusores(), FACE + FLANGE), (diff_w, 2 * P + 3.6, FACE + FLANGE)),
         # com a aba na mesa e o rebaixo dos LEDs para cima
         "tampas-dos-olhos.stl": (flip(tampas_dos_olhos(), TUBE_END + PW), (cap_w, cap_h, TUBE_END + PW - LED_Z)),
+        "trava-do-botao.stl": (
+            trava_do_botao().translate((0, 0, LATCH + BTN_BODY - SHELL)),
+            (latch_w, latch_w + 2 * RIB, LATCH),
+        ),
     }
     for name, (m, size) in parts.items():
         save(m, name, size)
-    # Uma mesa com as quatro peças de um Companion, 10 mm entre elas: cabe em 220 × 220 mm (a menor mesa da linha
+    # Uma mesa com as cinco peças de um Companion, 10 mm entre elas: cabe em 220 × 220 mm (a menor mesa da linha
     # Anycubic Kobra). No fatiador, "dividir em objetos" separa as peças para dar o branco aos difusores.
     gap = 10
-    body, lid, diff, caps = (parts[n][0] for n in parts)
+    body, lid, diff, caps, latch = (parts[n][0] for n in parts)
     side = 16 * P + gap
-    plate = union([at(body, 0, 0), at(lid, 0, 10 * P + gap), at(diff, side, 0), at(caps, 12 * P + gap, 10 * P + gap)])
+    plate = union([at(body, 0, 0), at(lid, 0, 10 * P + gap), at(diff, side, 0), at(caps, 12 * P + gap, 10 * P + gap),
+                   at(latch, side, 2 * P + 3.6 + gap)])
     save(plate, "mesa.stl", (max(side + diff_w, 12 * P + gap + cap_w), 10 * P + gap + 8 * P, SHELL))
