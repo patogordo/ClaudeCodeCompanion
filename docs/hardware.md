@@ -14,7 +14,7 @@ Wokwi (`firmware/diagram.json`) é a versão simplificada deste circuito; as dif
 | Plaquinhas de LED WS2812B (fita de 30 LEDs/m, 10 × 33 mm, um LED cada) | 4 | Duas em cada olho, deitadas, uma em cima da outra, coladas na tampinha do tubo de luz |
 | Mini protoboard de 170 furos | 1 | Cabe no chão do corpo. Para a versão final, placa perfurada soldada |
 | Adaptador SOT-23 para DIP | 2 | Para usar os MOSFETs (que são SMD) na protoboard |
-| Parafuso M2 × 8 autoatarraxante | 4 | Fecham a tampa |
+| Parafuso M2 × 8 autoatarraxante | 4 | Só com a tampa de parafusos; a de encaixe não usa |
 | Bateria LiPo 1S 3,7 V, 500 a 1000 mAh, com proteção | 1 | Soldada nos pads BAT+ e BAT− embaixo do XIAO, que carrega pelo USB-C |
 | Buzzer piezo passivo de 12 mm | 1 | Os sons. Piezo puxa pouca corrente e vai direto no pino; buzzer magnético precisa de transistor |
 | Chave táctil de 12 × 12 × 7,3 mm (4 pernas), com capa redonda de 13 mm | 1 | Liga e desliga. Fica num berço por dentro da tampa de trás, com a capa para fora; só a chave, sem a plaquinha do módulo |
@@ -28,7 +28,8 @@ Wokwi (`firmware/diagram.json`) é a versão simplificada deste circuito; as dif
 ## Pinagem
 
 A ESP32-C3 SuperMini também serve (o firmware compilado para o XIAO roda nela): nela, ligue pelo número do GPIO. Sem
-bateria, o esquema é o [`esquema-usb.svg`](esquema-usb.svg): LEDs no 5V, o GPIO2 no 3V3 e nada de MOSFET.
+bateria, o esquema é o [`esquema-usb.svg`](esquema-usb.svg): LEDs no 5V, o GPIO2 no 3V3 e nada de MOSFET. O suporte
+da placa na tampa (`3d/`) é do tamanho da SuperMini.
 
 | GPIO (XIAO) | Ligação |
 | --- | --- |

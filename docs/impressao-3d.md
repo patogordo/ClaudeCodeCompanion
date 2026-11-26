@@ -5,22 +5,30 @@ estão em `3d/` e saem do script `3d/gerar.py`, já na posição de imprimir: **
 
 <p align="center">
   <img src="screenshots/3d-frente.png" alt="O Companion impresso, de frente: corpo laranja com os dois olhos brancos" width="400">
-  <img src="screenshots/3d-tras.png" alt="As costas: botão, conector Qwiic, furo do USB-C, furos do som e os quatro parafusos" width="400">
+  <img src="screenshots/3d-tras.png" alt="As costas, com a tampa de encaixe: botão, o USB-C da placa rente à tampa e os furos do som" width="400">
 </p>
+
+**Vídeo da montagem:** [`screenshots/montagem.mp4`](screenshots/montagem.mp4) (33 s) mostra cada peça entrando no lugar,
+na ordem de montar.
 
 ## Peças
 
 | Arquivo | Cor | Na mesa |
 | --- | --- | --- |
 | `corpo.stl` | Laranja | Com o rosto para baixo. O rosto pega a textura da mesa (numa PEI texturizada fica fosco e bonito) |
-| `tampa.stl` | Laranja | Com o lado de fora para baixo (o berço do botão fica em cima) |
+| `tampa-encaixe.stl` ou `tampa-parafusos.stl` | Laranja | Com o lado de fora para baixo (o berço do botão e o suporte da placa ficam em cima) |
 | `difusores.stl` (os 2 olhos, ocos) | Branco | Com a aba para baixo |
 | `tampas-dos-olhos.stl` (as 2) | Qualquer; branco reflete mais luz | Com a aba para baixo (o rebaixo dos LEDs fica em cima) |
 | `trava-do-botao.stl` | Qualquer | Deitada |
+| `trava-da-placa.stl` | Qualquer | Deitada, com as linguetas para cima |
+
+**Duas tampas, o mesmo corpo:** a de encaixe tem quatro linguetas que estalam em rebaixos das paredes de dentro do
+corpo; para abrir, ponha uma moeda na fenda embaixo, no meio da borda de trás, e levante. A de parafusos fecha com 4
+parafusos M2 × 8 autoatarraxantes nas torres dos cantos, que continuam no corpo. Imprima uma das duas.
 
 O corpo tem 128 × 80 × 50 mm na mesa e cabe em qualquer impressora, até numa de 180 × 180 mm.
 
-**Tudo de uma vez:** `mesa.stl` traz as cinco peças de um Companion lado a lado, em 208 × 154 mm (cabe em qualquer
+**Tudo de uma vez:** `mesa.stl` traz as seis peças de um Companion lado a lado, com a tampa de encaixe, em 208 × 154 mm (cabe em qualquer
 Anycubic Kobra, a partir de 220 × 220 mm). No fatiador (Anycubic Slicer Next, Orca, Bambu Studio), use **Dividir →
 Para objetos** para separar as peças. Com multicor (o ACE da Anycubic), dê o branco aos difusores. Sem multicor,
 imprima os difusores à parte, em branco, ou só a `mesa.stl` sem eles. Para 3 Companions, são 3 impressões: três corpos
@@ -57,7 +65,7 @@ qualquer impressora faz.
 ## Onde vai cada componente
 
 <p align="center">
-  <img src="screenshots/3d-dentro.png" alt="Por dentro, sem a tampa: protoboard no chão com o XIAO, bateria na lateral, buzzer, botão, Qwiic e as tampinhas dos olhos, com os LEDs, encaixadas nos tubos de luz" width="560">
+  <img src="screenshots/3d-dentro.png" alt="Por dentro, sem a tampa: protoboard no chão, a ESP32-C3 SuperMini e o buzzer, que ficam na tampa, o botão e as tampinhas dos olhos, com os LEDs, encaixadas nos tubos de luz" width="560">
 </p>
 
 Visto por trás, com a tampa aberta:
@@ -72,28 +80,31 @@ Visto por trás, com a tampa aberta:
 - **Fios dos olhos:** GPIO5 → olho que fica à esquerda de quem olha de frente; GPIO6 → o outro. Por trás, o olho do
   GPIO5 é o da direita.
 - **Mini protoboard de 170 furos:** no chão, no meio, encostada na tampa. A fita dupla face que vem embaixo dela
-  segura.
-- **XIAO:** na ponta de trás da protoboard, com o USB-C virado para a tampa. Ele sai pelo furo de baixo, no meio.
-- **MOSFETs, resistores e capacitor:** na protoboard. O AO3401 e o 2N7002 são SMD (SOT-23): use um adaptador SOT-23
-  para DIP em cada um.
-- **Bateria:** em pé, na parede da esquerda, atrás do tubo do olho (a partir de uns 15 mm do rosto), com fita dupla
-  face de espuma. Uma 803040 (8 × 30 × 40 mm, 1000 mAh) cabe com os 40 mm na vertical, entre a torre de baixo e a de
-  cima.
+  segura. Em cima dela sobram uns 11 mm até o suporte da placa.
+- **ESP32-C3 SuperMini:** deitada no suporte da tampa, com o USB-C para fora. Solde os fios nos furos por cima (por
+  baixo, só o apoio do meio encosta na placa e os pinos ficam livres). Ponha a placa por cima no fundo do suporte,
+  encostada na parede de trás, e deslize até o USB-C entrar no furo: ele fica rente à tampa por fora, e o cabo encosta
+  nela. Depois empurre a trava da placa por cima, entre a placa e a parede: ela segura a placa contra a tampa e, com as
+  duas linguetas, por cima. O suporte conta com uma SuperMini de 18 × 22,52 mm com o USB-C passando 1 mm da borda;
+  meça a sua e, se for diferente, mude `MCU` e `USB_OVERHANG` no `gerar.py`.
+- **Resistores e capacitor:** na protoboard.
+- **Bateria** (só com o XIAO, que carrega bateria; a SuperMini não): em pé, na parede da esquerda, atrás do tubo do
+  olho (a partir de uns 15 mm do rosto), com fita dupla face de espuma. Uma 803040 (8 × 30 × 40 mm, 1000 mAh) cabe com
+  os 40 mm na vertical, entre a torre de baixo e a de cima. O suporte da tampa é do tamanho da SuperMini: para o XIAO
+  (21 × 17,8 mm), mude `MCU`.
 - **Buzzer:** colado na tampa, atrás dos furos do som (embaixo, à direita).
 - **Botão:** uma chave táctil de 12 × 12 mm, só a chave, sem a plaquinha do módulo. Solde os fios em duas pernas
   em diagonal (assim pega os dois contatos, qualquer que seja o lado) e encaixe a chave por dentro da tampa, no
   berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até encostar: as
   nervuras seguram sem cola, e os entalhes deixam passar as pernas. Ponha a capa por fora, pelo furo. O furo conta com
   uma capa redonda de 13 mm; se a sua for de outro tamanho, meça e mude o `CAP_D` no `gerar.py`.
-- **Rasgo do superpoder das costas** (na tampa): fica vazio por enquanto.
-- **Tampa:** 4 parafusos M2 × 8 autoatarraxantes nas torres dos cantos.
+- **Tampa:** a de encaixe estala no lugar; a de parafusos leva 4 parafusos M2 × 8 autoatarraxantes.
 
 ## Protoboard ou placa soldada
 
 A mini protoboard de 170 furos (47 × 35 × 8,5 mm) cabe e é ótima para o protótipo, mas com o tempo os jumpers e os
-componentes soltam. Para a versão final, solde tudo numa placa perfurada do mesmo tamanho. A altura do furo do USB-C
-na tampa conta com a protoboard (`USB_Y` no `gerar.py`); se o XIAO ficar em outra altura, mude o valor e gere a tampa
-de novo.
+componentes soltam. Para a versão final, solde tudo numa placa perfurada do mesmo tamanho. O suporte da placa fica
+logo acima dela (`MCU_Y` no `gerar.py`).
 
 ## Mudar o tamanho
 

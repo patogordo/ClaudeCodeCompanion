@@ -48,6 +48,26 @@ LEGS_SLOT = 7.2  # rasgo das pernas (5 mm entre elas) nas duas paredes da esquer
 LATCH = 3.0  # espessura da trava
 CRADLE = BTN_BODY + LATCH + 1.0  # altura do berço: a trava entra até encostar na chave, seja qual for a altura dela
 
+# Placa: ESP32-C3 SuperMini, deitada num suporte na tampa, com o USB-C rente à tampa por fora. A placa entra por cima
+# no fundo do suporte e desliza até o USB-C entrar no furo; a trava da placa ocupa a folga que sobra atrás
+MCU = (18.0, 22.52)  # largura (x) e comprimento (z)
+MCU_PCB = 1.0  # espessura da placa; a trava assenta em cima dela, então outra espessura também serve
+MCU_Y = 40.0  # face de baixo da placa: embaixo dela fica a protoboard
+MCU_FIT = 0.25  # folga de cada lado da placa entre as guias
+MCU_RIB = 5.0  # meia largura do apoio embaixo da placa: os pinos (a 7,62 mm do meio) ficam livres
+USB_C = (8.94, 3.26)  # largura e altura do conector, montado em cima da placa
+USB_OVERHANG = 1.0  # quanto o USB-C passa da borda da placa (meça a sua): a tampa fica com essa espessura em volta
+USB_FIT = 0.25  # folga de cada lado do USB-C no furo
+SLACK = USB_OVERHANG + 1.5  # espaço atrás da placa para ela entrar sem o USB-C bater na tampa
+GUIDE = 1.6  # espessura das guias, do apoio e da parede de trás do suporte
+
+# Tampa de encaixe: quatro linguetas, em cima e embaixo, com um dente que entra num rebaixo das paredes do corpo. A
+# tampa de parafusos continua valendo; o corpo serve para as duas
+TAB_X = (34.0, 94.0)  # longe das torres dos parafusos, da protoboard e do buzzer
+TAB_W, TAB_T, TAB_L = 8.0, 1.2, 8.0  # largura, espessura e comprimento de cada lingueta
+TAB_FIT = 0.2  # folga entre a lingueta e a parede
+BUMP, CREST = 0.6, 1.0  # dente: altura (com rampas de 45°) e topo reto; a lingueta dobra BUMP - TAB_FIT ao entrar
+
 # O mascote em pixels: (coluna, linha) a partir do canto de baixo à esquerda (ele é simétrico)
 BODY = (2, 2, 14, 10)
 ARMS = [(0, 4, 2, 6), (14, 4, 16, 6)]
@@ -57,7 +77,6 @@ EYES = [(4, 6, 5, 8), (11, 6, 12, 8)]
 SHELL = D - LID  # o corpo vai de z = 0 até aqui; a tampa fecha o resto
 CX = 8 * P  # centro do mascote em x
 IN = (BODY[0] * P + WALL, BODY[1] * P + WALL, BODY[2] * P - WALL, BODY[3] * P - WALL)  # a cavidade (x0, y0, x1, y1)
-USB_Y = IN[1] + 8.5 + 2.5 + 1.0 + 1.6  # chão + protoboard + espaçador dos pinos + placa + metade do USB-C
 OUT = Path(__file__).parent
 
 
@@ -72,6 +91,11 @@ def cyl(x, y, z0, z1, d, d1=None):
 def pixels(rect, z0, z1):
     c0, r0, c1, r1 = rect
     return box(c0 * P, r0 * P, z0, c1 * P, r1 * P, z1)
+
+
+def stadium(x, y, z0, z1, w, h):
+    """Retângulo de pontas redondas (w × h, deitado), como o USB-C."""
+    return (cyl(x - (w - h) / 2, y, z0, z1, h) + cyl(x + (w - h) / 2, y, z0, z1, h)).hull()
 
 
 def union(parts):
@@ -129,30 +153,96 @@ def corpo() -> Manifold:
     for x, y in BOSSES:  # torres dos parafusos da tampa (M2 × 8 autoatarraxante)
         shell += cyl(x, y, FACE, SHELL, 6.5)
         shell -= cyl(x, y, SHELL - 10, SHELL + 1, 1.7)
+    shell -= union([notch for _, notch in snaps()])  # rebaixos dos dentes da tampa de encaixe
+    # fenda embaixo, no meio da borda de trás: uma moeda ou chave de fenda ali levanta a tampa
+    shell -= box(CX - 6, BODY[1] * P - 1, SHELL - 1, CX + 6, IN[1] - 1, SHELL + 1)
     return shell
 
 
-def tampa() -> Manifold:
+def snaps() -> list[tuple[Manifold, Manifold]]:
+    """(lingueta com o dente, rebaixo na parede do corpo) de cada encaixe, na posição montada. Dente e rebaixo têm
+    rampas de 45°: a tampa entra e sai com a mão, e as peças imprimem sem suporte."""
+    out = []
+    for xc in TAB_X:
+        yo = IN[3] - TAB_FIT  # face de fora da lingueta de cima
+        z0, w = SHELL - TAB_L, TAB_W / 2
+        tab = box(xc - w, yo - TAB_T, z0, xc + w, yo, SHELL)
+        tooth = [(z0, yo - 0.2), (z0, yo), (z0 + BUMP, yo + BUMP), (z0 + BUMP + CREST, yo + BUMP),
+                 (z0 + 2 * BUMP + CREST, yo), (z0 + 2 * BUMP + CREST, yo - 0.2)]
+        deep, open_ = yo + BUMP + 0.1, IN[3] - 0.5  # o rebaixo passa 0,1 mm do dente e começa dentro da cavidade
+        spread = deep - open_
+        notch = [(z0 + BUMP - 0.2, deep), (z0 + BUMP + CREST + 0.2, deep),
+                 (z0 + BUMP - 0.2 - spread, open_), (z0 + BUMP + CREST + 0.2 + spread, open_)]
+        top = (tab + prism(tooth, xc - w, xc + w), prism(notch, xc - w - 0.3, xc + w + 0.3))
+        bottom = tuple(m.mirror((0, 1, 0)).translate((0, IN[1] + IN[3], 0)) for m in top)  # o de baixo é o espelho
+        out += [top, bottom]
+    return out
+
+
+def prism(profile, x0, x1):
+    """Prisma de x0 a x1 com o perfil convexo [(z, y)]."""
+    return Manifold.hull_points(np.array([(x, y, z) for z, y in profile for x in (x0, x1)], dtype=float))
+
+
+def mcu_z():
+    """Onde a placa fica em z: a borda da frente (dentro da tampa), a de trás e a frente da parede do suporte."""
+    front = D - USB_OVERHANG  # assim o USB-C fica rente à tampa por fora
+    back = front - MCU[1]
+    return front, back, back - SLACK
+
+
+def tampa(encaixe: bool = True) -> Manifold:
+    """A tampa de trás, de encaixe (com as linguetas) ou de parafusos (M2 × 8 nas torres do corpo)."""
     plate = box(BODY[0] * P, BODY[1] * P, SHELL, BODY[2] * P, BODY[3] * P, D)
+    front, _, _ = mcu_z()
+    usb_y = MCU_Y + MCU_PCB + USB_C[1] / 2
+    hw = MCU[0] / 2 + MCU_FIT
     holes = [
-        # USB-C do XIAO, que fica na protoboard encostada na tampa
-        box(CX - 7 + 4.5, USB_Y - 4.5, SHELL - 1, CX + 7 - 4.5, USB_Y + 4.5, D + 1),
-        cyl(CX - 7 + 4.5, USB_Y, SHELL - 1, D + 1, 9),
-        cyl(CX + 7 - 4.5, USB_Y, SHELL - 1, D + 1, 9),
+        # o furo do USB-C tem o tamanho do conector, que fica rente à tampa; o cabo encosta nela por fora
+        stadium(CX, usb_y, SHELL - 1, D + 1, USB_C[0] + 2 * USB_FIT, USB_C[1] + 2 * USB_FIT),
+        # rebaixo por dentro, para a borda da frente da placa (com o que estiver perto dela) entrar na tampa
+        box(CX - hw, MCU_Y - 0.3, SHELL - 1, CX + hw, usb_y + USB_C[1] / 2 + USB_FIT + 0.5, front),
         cyl(*BTN, SHELL - 1, D + 1, CAP_D + 0.8),  # a capa do botão (liga e desliga) passa por aqui
-        box(92 - 4, 64 - 2.5, SHELL - 1, 92 + 4, 64 + 2.5, D + 1),  # superpoder das costas: conector Qwiic
     ]
     holes += [  # furos do som, na frente do buzzer
         cyl(96 + 3.2 * np.cos(a), 30 + 3.2 * np.sin(a), SHELL - 1, D + 1, 1.6) for a in np.arange(6) * np.pi / 3
     ] + [cyl(96, 30, SHELL - 1, D + 1, 1.6)]
-    for x, y in BOSSES:  # parafusos escareados
-        holes += [cyl(x, y, SHELL - 1, D + 1, 2.3), cyl(x, y, D - 1.1, D + 0.01, 2.2, 4.4)]
+    if not encaixe:
+        for x, y in BOSSES:  # parafusos escareados
+            holes += [cyl(x, y, SHELL - 1, D + 1, 2.3), cyl(x, y, D - 1.1, D + 0.01, 2.2, 4.4)]
     # berço do botão: a chave encosta na tampa por dentro, e a trava entra por trás e a segura
     inner = grow((*BTN, *BTN), BTN_SIZE / 2 + BTN_FIT)
     cradle = rbox(grow(inner, PW), SHELL - CRADLE, SHELL) - rbox(inner, SHELL - CRADLE - 1, SHELL + 1)
     legs = (inner[0] - PW - 1, BTN[1] - LEGS_SLOT / 2, inner[2] + PW + 1, BTN[1] + LEGS_SLOT / 2)
     cradle -= rbox(legs, SHELL - CRADLE - 1, SHELL + 1)
-    return plate - union(holes) + cradle
+    lid = plate - union(holes) + cradle + suporte_da_placa()
+    return lid + union([tab for tab, _ in snaps()]) if encaixe else lid
+
+
+def suporte_da_placa() -> Manifold:
+    """Guias dos lados, um apoio no meio, embaixo da placa (os pinos ficam livres), e a parede de trás."""
+    _, _, wall = mcu_z()
+    hw = MCU[0] / 2 + MCU_FIT
+    top = MCU_Y + MCU_PCB + 2.5
+    z0 = wall - GUIDE
+    parts = [box(CX - MCU_RIB, MCU_Y - GUIDE, z0, CX + MCU_RIB, MCU_Y, SHELL)]
+    parts += [box(x0, MCU_Y - GUIDE, z0, x0 + GUIDE, top, SHELL) for x0 in (CX - hw - GUIDE, CX + hw)]
+    parts.append(box(CX - hw - GUIDE, MCU_Y - GUIDE, z0, CX + hw + GUIDE, top, wall))
+    return union(parts)
+
+
+def trava_da_placa() -> Manifold:
+    """Entra por cima entre a placa e a parede de trás do suporte: empurra a placa contra a tampa e, com as duas
+    linguetas, a segura por cima. As linguetas ficam fora do meio (a antena) e antes dos primeiros pinos."""
+    _, back, wall = mcu_z()
+    hw = MCU[0] / 2 + MCU_FIT
+    pcb_top = MCU_Y + MCU_PCB
+    x0, x1, z1 = CX - hw + PLUG_FIT, CX + hw - PLUG_FIT, back - 0.1
+    latch = box(x0, pcb_top - 0.8, wall, x1, pcb_top + 4.0, z1)
+    latch += union([box(CX + a, pcb_top + 0.05, z1 - 0.01, CX + b, pcb_top + 1.05, back + 1.0)
+                    for a, b in ((-8.0, -4.5), (4.5, 8.0))])
+    rib = Manifold.cylinder(pcb_top + 2.5 - (pcb_top - 0.2), 0.5, 0.5, 24).rotate((-90, 0, 0))  # nervura em pé (y)
+    return latch + union([rib.translate((x, pcb_top - 0.2, (wall + z1) / 2)) for x in (x0 - RIB + 0.5, x1 + RIB - 0.5)])
 
 
 def trava_do_botao() -> Manifold:
@@ -241,6 +331,33 @@ def check_button() -> None:
     assert (corpo() ^ lid).volume() < 1e-6, "o berço do botão bate no corpo"
 
 
+def check_lids() -> None:
+    """As duas tampas fecham no mesmo corpo sem bater; a de encaixe com os dentes dentro dos rebaixos."""
+    body = corpo()
+    for encaixe in (True, False):
+        assert (body ^ tampa(encaixe)).volume() < 1e-6, f"a tampa ({encaixe=}) bate no corpo"
+    assert 0.3 <= BUMP - TAB_FIT <= 0.5, "a lingueta precisa dobrar uns 0,4 mm para o dente passar"
+    for tab, _ in snaps():
+        assert (body ^ tab.translate((0, 0, -BUMP - CREST))).volume() > 0.1, "o dente não segura a tampa"
+
+
+def check_mcu() -> None:
+    """A placa entra no suporte e fica com o USB-C rente à tampa; a trava só aperta pelas nervuras."""
+    front, back, wall = mcu_z()
+    pcb_top = MCU_Y + MCU_PCB
+    board = box(CX - MCU[0] / 2, MCU_Y, back, CX + MCU[0] / 2, pcb_top, front)
+    board += stadium(CX, pcb_top + USB_C[1] / 2, D - 7.35, D, *USB_C)  # o USB-C, rente à tampa
+    lid, latch = tampa(), trava_da_placa()
+    assert (lid ^ board).volume() < 1e-6, "a placa bate na tampa"
+    loose = board.translate((0, 0, -SLACK))  # antes de deslizar: entra por cima, encostada na parede de trás
+    assert (lid ^ (loose + loose.translate((0, 25, 0))).hull()).volume() < 1e-6, "a placa não entra por cima"
+    assert (latch ^ board).volume() < 1e-6, "a trava bate na placa"
+    assert 0 < (lid ^ latch).volume() < 3, "a trava não aperta só pelas nervuras"
+    assert (lid ^ latch.translate((0, 6, 0))).volume() < 1e-6, "a trava não sai por cima"
+    protoboard = box(46.5, IN[1], 2.5, 81.5, IN[1] + 8.5 + 11, SHELL)  # com até 11 mm de componentes em cima
+    assert (lid ^ protoboard).volume() < 1e-6, "o suporte da placa bate na protoboard"
+
+
 def flip(m: Manifold, z_top: float) -> Manifold:
     """Vira a peça de cabeça para baixo (gira 180° em y) mantendo o lugar em x: o que era z_top encosta na mesa."""
     return m.rotate((0, 180, 0)).translate((16 * P, 0, z_top))
@@ -273,13 +390,19 @@ def at(m: Manifold, x: float, y: float) -> Manifold:
 if __name__ == "__main__":
     check_eyes()
     check_button()
+    check_lids()
+    check_mcu()
     diff_w = eye_flange(EYES[1])[2] - eye_flange(EYES[0])[0]
     cap = grow(eye_parts(EYES[0])["tube"], PW)
     latch_w = BTN_SIZE + 2 * (BTN_FIT - PLUG_FIT)
+    lid_size = (12 * P, 8 * P, D - mcu_z()[2] + GUIDE)
+    mcu_latch_w = MCU[0] + 2 * (MCU_FIT - PLUG_FIT + RIB)
     cap_w, cap_h = 2 * CX - 2 * (eye_parts(EYES[0])["plug"][0] - RIB), cap[3] - cap[1]  # com as nervuras das pontas
     parts = {
         "corpo.stl": (corpo(), (16 * P, 10 * P, SHELL)),
-        "tampa.stl": (flip(tampa(), D), (12 * P, 8 * P, LID + CRADLE)),  # o berço do botão fica para cima
+        # o lado de fora na mesa; o berço do botão e o suporte da placa para cima
+        "tampa-encaixe.stl": (flip(tampa(True), D), lid_size),
+        "tampa-parafusos.stl": (flip(tampa(False), D), lid_size),
         "difusores.stl": (flip(difusores(), FACE + FLANGE), (diff_w, 2 * P + 3.6, FACE + FLANGE)),
         # com a aba na mesa e o rebaixo dos LEDs para cima
         "tampas-dos-olhos.stl": (flip(tampas_dos_olhos(), TUBE_END + PW), (cap_w, cap_h, TUBE_END + PW - LED_Z)),
@@ -287,14 +410,17 @@ if __name__ == "__main__":
             trava_do_botao().translate((0, 0, LATCH + BTN_BODY - SHELL)),
             (latch_w, latch_w + 2 * RIB, LATCH),
         ),
+        # deitada, com as linguetas para cima
+        "trava-da-placa.stl": (trava_da_placa().translate((0, 0, -mcu_z()[2])), (mcu_latch_w, 4.8, SLACK + 1)),
     }
     for name, (m, size) in parts.items():
         save(m, name, size)
-    # Uma mesa com as cinco peças de um Companion, 10 mm entre elas: cabe em 220 × 220 mm (a menor mesa da linha
-    # Anycubic Kobra). No fatiador, "dividir em objetos" separa as peças para dar o branco aos difusores.
+    # Uma mesa com as seis peças de um Companion (com a tampa de encaixe), 10 mm entre elas: cabe em 220 × 220 mm (a
+    # menor mesa da linha Anycubic Kobra). No fatiador, "dividir em objetos" separa as peças para dar o branco aos
+    # difusores.
     gap = 10
-    body, lid, diff, caps, latch = (parts[n][0] for n in parts)
+    body, lid, _, diff, caps, latch, mcu_latch = (parts[n][0] for n in parts)
     side = 16 * P + gap
     plate = union([at(body, 0, 0), at(lid, 0, 10 * P + gap), at(diff, side, 0), at(caps, 12 * P + gap, 10 * P + gap),
-                   at(latch, side, 2 * P + 3.6 + gap)])
+                   at(latch, side, 2 * P + 3.6 + gap), at(mcu_latch, side + latch_w + gap, 2 * P + 3.6 + gap)])
     save(plate, "mesa.stl", (max(side + diff_w, 12 * P + gap + cap_w), 10 * P + gap + 8 * P, SHELL))
