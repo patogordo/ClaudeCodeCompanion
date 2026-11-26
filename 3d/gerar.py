@@ -44,7 +44,7 @@ BTN_SIZE = 12.0
 BTN_BODY = 3.5  # da base da chave até a chapa de metal
 BTN_FIT = 0.2  # folga de cada lado da chave no berço
 CAP_D = 13.0  # diâmetro da capa (meça a sua): o furo tem 0,4 mm de folga de cada lado, para a capa não raspar
-LEGS_SLOT = 7.2  # rasgo das pernas (5 mm entre elas) nas duas paredes da esquerda e da direita do berço
+LEGS_SLOT = 9.0  # rasgo das pernas (5 mm entre elas) nas paredes da esquerda e da direita: cabe a solda e o fio
 LATCH = 3.0  # espessura da trava
 CRADLE = BTN_BODY + LATCH + 3.0  # altura do berço: a parede passa 3 mm da trava, para a borda da janela ser forte
 BARB = 0.5  # dente de cada lado da trava: estala na janela da parede, e o aperto do botão vai direto para ela
@@ -281,7 +281,7 @@ def trava_do_botao() -> Manifold:
     x0, y0, x1, y1 = grow((bx, by, bx, by), BTN_SIZE / 2 + BTN_FIT - PLUG_FIT)
     z0, z1 = SHELL - BTN_BODY - LATCH, SHELL - BTN_BODY  # z1 encosta na chave
     latch = box(x0, y0, z0, x1, y1, z1)
-    for nx0, nx1 in ((x0 - 1, bx - 5.2), (bx + 5.2, x1 + 1)):  # as pernas saem a 6,25 mm do centro
+    for nx0, nx1 in ((x0 - 1, bx - 5.0), (bx + 5.0, x1 + 1)):  # as pernas saem a 6,25 mm do centro
         latch -= box(nx0, by - LEGS_SLOT / 2, z0 - 1, nx1, by + LEGS_SLOT / 2, z1 + 1)
     ribs = [(bx + dx, y) for dx in (-3.5, 3.5) for y in (y0 - RIB + 0.5, y1 + RIB - 0.5)]
     latch += union([cyl(x, y, z0, z1 - 0.6, 1.0) for x, y in ribs])  # a ponta sem nervura entra alinhada
@@ -362,6 +362,10 @@ def check_button() -> None:
     for name, part in [("a chave", switch), ("as pernas", legs), ("a capa", cap)]:
         assert (lid ^ part).volume() < 1e-6, f"{name} bate na tampa"
     assert (latch ^ (switch + legs)).volume() < 1e-6, "a trava bate na chave"
+    # a solda com o fio, 1 mm em volta de cada perna, cabe no rasgo e no entalhe
+    solder = union([box(bx + x - 1, by + y - 1, base - 3.5, bx + x + 1, by + y + 1, base)
+                    for x in (-6.25, 6.25) for y in (-2.5, 2.5)])
+    assert (lid ^ solder).volume() < 1e-6 and (latch ^ solder).volume() < 1e-6, "não cabe a solda nas pernas"
     assert 0 < (lid ^ latch).volume() < 3, "a trava não aperta só pelas nervuras"
     assert (lid ^ latch.translate((0, 0, -0.6))).volume() > 0.05, "os dentes da trava não seguram na janela"
     assert (corpo() ^ lid).volume() < 1e-6, "o berço do botão bate no corpo"

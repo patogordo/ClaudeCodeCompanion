@@ -99,8 +99,9 @@ Visto por trás, com a tampa aberta:
   os 40 mm na vertical, entre a torre de baixo e a de cima. O suporte da tampa é do tamanho da SuperMini: para o XIAO
   (21 × 17,8 mm), mude `MCU`.
 - **Buzzer:** colado na tampa, atrás dos furos do som (embaixo, à direita).
-- **Botão:** uma chave táctil de 12 × 12 mm, só a chave, sem a plaquinha do módulo. Solde os fios em duas pernas
-  em diagonal (assim pega os dois contatos, qualquer que seja o lado) e encaixe a chave por dentro da tampa, no
+- **Botão:** uma chave táctil de 12 × 12 mm, só a chave, sem a plaquinha do módulo. Solde os fios antes de montar
+  (depois as pernas ficam dentro do berço), em duas pernas em diagonal: assim pega os dois contatos, qualquer que seja
+  o lado. Fio fino, de 26 a 28 AWG, sai fácil pelos rasgos dos lados do berço. Então encaixe a chave por dentro da tampa, no
   berço em cima à esquerda, com as pernas para os lados abertos do berço. Empurre a trava atrás dela até estalar: as
   nervuras a deixam justa, e os dois dentes entram nas janelas das paredes do berço, então apertar o botão (mesmo um
   duro) empurra a trava contra a parede, não para fora. Os entalhes deixam passar as pernas. Para tirar, aperte os
